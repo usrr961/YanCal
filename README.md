@@ -1,5 +1,3 @@
-I’ll inspect the repository structure and key project files, then draft a README tailored to the actual project and send it here.
-
 # YanCal
 
 YanCal is a Progressive Web App for viewing and managing school bell schedules. It provides daily and monthly schedule views, organization-specific schedules, authentication, offline support, barcode-based access, and administrative tools for creating and importing schedules.
