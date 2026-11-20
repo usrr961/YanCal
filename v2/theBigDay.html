@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Today's Day Type</title>
+	<style>
+		body {
+			text-align: center;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+			-webkit-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div id="day" style="display:none;"></div>
+
+	<script>
+		// Hardcoded credentials
+    const HARD_EMAIL = "nrayan678@gmail.com";
+    const HARD_PW    = "bluejay360";
+
+    // Load scheduleData from localStorage (as original app does)
+    const scheduleData = JSON.parse(localStorage.getItem("scheduleData") || "{}");
+
+    // Helper to format date as YYYY-MM-DD
+    function ymd(d) {
+      return d.toISOString().slice(0,10);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const email = HARD_EMAIL
+      const pw    = HARD_PW
+      const err   = document.getElementById("error");
+
+      if (email === HARD_EMAIL && pw === HARD_PW) {
+        // Compute today's key and fetch its type/letter
+        const today = new Date();
+        const key   = ymd(today);
+        const type  = (scheduleData[key] && scheduleData[key].type) || "No Schedule";
+
+        // Show the day type/letter
+        document.getElementById("day").textContent = type.replace(/[^A-Z]/g, '')
+        document.getElementById("day").style.display   = "block";
+      } else {
+        err.textContent = "Invalid credentials";
+      }
+    })
+	</script>
+</body>
+
+</html>

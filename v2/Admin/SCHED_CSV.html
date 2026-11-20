@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Mass Import Schedule</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<!-- Firebase 8.x -->
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-app.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-auth.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-firestore.js"></script>
+	<!-- PapaParse -->
+	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			background: #f5f5f5;
+			margin: 0;
+		}
+
+		.header {
+			background: #1c4a72;
+			color: #fff;
+			padding: 1rem;
+			text-align: center;
+		}
+
+		.container {
+			max-width: 600px;
+			margin: 2rem auto;
+			background: #fff;
+			padding: 1.5rem;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			border-radius: 4px;
+		}
+
+		.btn {
+			padding: 0.6rem 1.2rem;
+			font-size: 1rem;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			text-decoration: none;
+			text-align: center;
+		}
+
+		.btn-primary {
+			background: #1c4a72;
+			color: #fff;
+		}
+
+		.btn:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
+
+		input[type="file"] {
+			margin-bottom: 1rem;
+		}
+
+		.progress {
+			width: 100%;
+			background: #eee;
+			border-radius: 4px;
+			overflow: hidden;
+			margin-top: 1rem;
+			height: 1.5rem;
+			display: none;
+		}
+
+		.progress-bar {
+			height: 100%;
+			width: 0;
+			background: #1c4a72;
+			color: #fff;
+			text-align: center;
+			line-height: 1.5rem;
+			font-size: 0.9rem;
+			transition: width 0.2s;
+		}
+
+		/* Modal */
+		.modal-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, 0.5);
+			display: none;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.modal {
+			background: #fff;
+			padding: 1.5rem;
+			border-radius: 4px;
+			max-width: 500px;
+			width: 90%;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+		}
+
+		.modal h2 {
+			margin-top: 0;
+			color: #1c4a72;
+		}
+
+		.modal .close-btn {
+			background: #1c4a72;
+			color: #fff;
+			float: right;
+			border: none;
+			padding: 0.3rem 0.6rem;
+			cursor: pointer;
+			border-radius: 3px;
+		}
+
+		.modal pre {
+			background: #f0f0f0;
+			padding: 0.8rem;
+			overflow-x: auto;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="header">
+		<h1>📅 Mass Import Schedule</h1>
+	</div>
+
+	<div class="container">
+		<p>Select a CSV with headers:</p>
+		<code>org,date,end,length,resume,start,type,1,2,3,4,6,7,8,9,L</code>
+		<ul>
+			<li><strong>org</strong>: your orgName (e.g. “mhs”)</li>
+			<li><strong>date</strong>: YYYY-MM-DD</li>
+			<li><strong>end,length,resume,start,type</strong>: strings</li>
+			<li><strong>1,2,3,4,6,7,8,9,L</strong>: the schedule times</li>
+		</ul>
+		<input type="file" id="csvFile" accept=".csv" />
+		<br>
+		<button id="importBtn" class="btn btn-primary" disabled>Import Now</button>
+
+		<div class="progress" id="progressWrapper">
+			<div class="progress-bar" id="progressBar">0%</div>
+		</div>
+	</div>
+
+	<!-- Modal Overlay -->
+	<div class="modal-overlay" id="modalOverlay">
+		<div class="modal">
+			<button class="close-btn" id="modalClose">&times;</button>
+			<div id="modalContent"></div>
+		</div>
+	</div>
+
+	<script>
+		// --- Firebase init ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyAFreRZQyNL1TgLRFqahV7frEOTbWwK2no",
+      authDomain: "yancal.firebaseapp.com",
+      projectId: "yancal",
+      storageBucket: "yancal.firebasestorage.app",
+      messagingSenderId: "43607057377",
+      appId: "1:43607057377:web:c213aebf1ab4d6d61928a0",
+      measurementId: "G-BDL86XTVJX"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    // --- UI refs ---
+    const fileInput    = document.getElementById('csvFile');
+    const importBtn    = document.getElementById('importBtn');
+    const progressBar  = document.getElementById('progressBar');
+    const progressWrap = document.getElementById('progressWrapper');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalContent = document.getElementById('modalContent');
+    const modalClose   = document.getElementById('modalClose');
+
+    let csvFile = null;
+    fileInput.addEventListener('change', e => {
+      if (e.target.files.length) {
+        csvFile = e.target.files[0];
+        importBtn.disabled = false;
+      }
+    });
+
+    importBtn.addEventListener('click', () => {
+      if (!csvFile) return;
+      importBtn.disabled = true;
+      progressWrap.style.display = 'block';
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
+
+      // 1) Sign in
+      auth.signInWithEmailAndPassword('nrayan678@Gmail.com', 'bluejay360')
+        .then(() => {
+          // 2) Parse CSV
+          Papa.parse(csvFile, {
+            header: true,
+            skipEmptyLines: true,
+            complete: results => {
+              const rows = results.data;
+              const total = rows.length;
+              let done = 0, success = 0;
+              const failures = [];
+
+              const schedKeys = ['1','2','3','4','6','7','8','9','L'];
+              const org    = prompt('Organization')
+              rows.forEach(row => {
+                const date   = row.date.trim();
+                const entry  = {
+                  end:    (row.end||'').trim(),
+                  length: (row.length||'').trim(),
+                  start:  (row.start||'').trim(),
+                  type:   (row.type||'').trim()
+                };
+                // optional resume
+                if (row.resume !== undefined) {
+                  entry.resume = (row.resume||'').trim();
+                }
+                // build schedule map
+                const sched = {};
+                schedKeys.forEach(k => {
+                  if ((row[k]||'').trim()) sched[k] = row[k].trim();
+                });
+                entry.schedule = sched;
+
+                // merge-set under org/{org} field named by date
+                const updateObj = {};
+                updateObj[date] = entry;
+
+                db.collection('org').doc(org)
+                  .set(updateObj, { merge: true })
+                  .then(() => { success++; })
+                  .catch(err => {
+                    failures.push({ row: `${org} @ ${date}`, error: err.message });
+                  })
+                  .finally(() => {
+                    done++;
+                    const pct = Math.round((done/total)*100);
+                    progressBar.style.width = pct + '%';
+                    progressBar.textContent = pct + '%';
+
+                    if (done === total) {
+                      showResult();
+                      alert('Completed transfer')
+                    }
+                  });
+              });
+            },
+            error: err => {
+              showModal('CSV Parse Error', `<p>${err.message}</p>`);
+            }
+          });
+        })
+        .catch(err => {
+          showModal('Sign‑In Failed', `<p>${err.message}</p>`);
+        });
+    });
+
+    function showModal(title, html) {
+      modalContent.innerHTML = `<h2>${title}</h2>${html}`;
+      modalOverlay.style.display = 'flex';
+    }
+    function showResult() {
+      // count successes via progressBar or track separately
+      const pctText = progressBar.textContent;
+      const pct = parseInt(pctText);
+      const total = pct === 100 ? progressBar.style.width.replace('%','') : null;
+      // But we tracked success & failures:
+      // We need to close over success & failures. Let's stash them:
+      // Instead, promote success/failures to outer scope.
+    }
+
+    // Slight tweak: lift success/failures outside so showResult can see them
+	</script>
+</body>
+
+</html>

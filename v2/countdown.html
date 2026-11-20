@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>FRC 2025 Countdown</title>
+	<style>
+		body {
+			-webkit-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+			font-family: Arial, sans-serif;
+			margin: 0;
+			padding: 0;
+			background-color: #000;
+			color: #fff;
+			filter: invert(2);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			margin-top: -2rem;
+		}
+
+		h1 {
+			font-size: 1.5em;
+			margin: 10px 0;
+			color: #ff8400;
+		}
+
+		#current-date {
+			font-size: 1em;
+			margin-bottom: 20px;
+		}
+
+		#events {
+			width: 90%;
+			max-width: 500px;
+		}
+
+		.event {
+			margin: 10px 0;
+			padding: 15px;
+			border-radius: 8px;
+			background: #f4f4f9;
+			color: #333;
+			text-align: center;
+			transition: transform 0.3s ease;
+		}
+
+		.event:hover {
+			transform: scale(1.025);
+		}
+
+		.event.past {
+			background: #444;
+			color: #ccc;
+		}
+
+		.countdown {
+			font-size: 1em;
+			font-weight: bold;
+		}
+
+		.event-date {
+			font-size: 0.9em;
+			color: #777;
+		}
+
+		html {
+			scrollbar-width: none;
+		}
+
+		/* Firefox */
+		body {
+			-ms-overflow-style: none;
+		}
+
+		/* IE and Edge */
+		body::-webkit-scrollbar,
+		body::-webkit-scrollbar-button {
+			display: none;
+		}
+
+		.past {
+			/*To Auto Delete passed elements in widget mode
+                If to be used not widget, remove*/
+			visibility: hidden !important;
+			position: absolute !important;
+		}
+
+
+		/* Chrome */
+		/* end hide page scrollbar */
+	</style>
+</head>
+
+<body>
+	<div id="current-date"></div>
+	<div id="events"></div>
+	<script>
+		const events = [
+			// --- 2026–2027 School Year ---
+			{
+				"name": "District Closed – Observance of Independence Day",
+				"date": "2026-07-03T00:00:00"
+			},
+			{
+				"name": "New Teacher Orientation",
+				"date": "2026-08-25T00:00:00"
+			},
+			{
+				"name": "Freshman & New Student Orientation",
+				"date": "2026-08-26T00:00:00"
+			},
+			{
+				"name": "Staff Convocation",
+				"date": "2026-09-01T00:00:00"
+			},
+			{
+				"name": "Staff PD",
+				"date": "2026-09-02T00:00:00"
+			},
+			{
+				"name": "First Day for Students",
+				"date": "2026-09-03T00:00:00"
+			},
+			{
+				"name": "Labor Day (District Closed)",
+				"date": "2026-09-07T00:00:00"
+			},
+			{
+				"name": "Yom Kippur (District Closed)",
+				"date": "2026-09-21T00:00:00"
+			},
+			{
+				"name": "Indigenous People's Day/Columbus Day (District Closed)",
+				"date": "2026-10-12T00:00:00"
+			},
+			{
+				"name": "Evening Middle & High P/T Conferences / PD Elem. Abbrev. day",
+				"date": "2026-10-21T00:00:00"
+			},
+			{
+				"name": "Afternoon Middle & High P/T Conferences / PD Elem. Abbrev. day",
+				"date": "2026-10-22T00:00:00"
+			},
+			{
+				"name": "Election Day (Staff PD, Schools Closed)",
+				"date": "2026-11-03T00:00:00"
+			},
+			{
+				"name": "NJEA Convention (District Closed)",
+				"date": "2026-11-05T00:00:00"
+			},
+			{
+				"name": "Veteran's Day (District Closed)",
+				"date": "2026-11-11T00:00:00"
+			},
+			{
+				"name": "Abbreviated Day for Students & Staff",
+				"date": "2026-11-25T00:00:00"
+			},
+			{
+				"name": "Thanksgiving (District Closed)",
+				"date": "2026-11-26T00:00:00"
+			},
+			{
+				"name": "Evening Elem. P/T Conferences / PD Middle & High Abbrev. day",
+				"date": "2026-12-02T00:00:00"
+			},
+			{
+				"name": "Afternoon Elem. P/T Conferences / PD Middle & High Abbrev. day",
+				"date": "2026-12-03T00:00:00"
+			},
+			{
+				"name": "Early Dismissal for Students & Staff",
+				"date": "2026-12-23T00:00:00"
+			},
+			{
+				"name": "Winter Break (District Closed)",
+				"date": "2026-12-24T00:00:00"
+			},
+			{
+				"name": "Christmas Day (District Closed)",
+				"date": "2026-12-25T00:00:00"
+			},
+			{
+				"name": "Winter Break (Schools Closed)",
+				"date": "2026-12-28T00:00:00"
+			},
+			{
+				"name": "New Year's Day (District Closed)",
+				"date": "2027-01-01T00:00:00"
+			},
+			{
+				"name": "District Reopens",
+				"date": "2027-01-04T00:00:00"
+			},
+			{
+				"name": "Staff PD – Abbrev. day for Students",
+				"date": "2027-01-11T00:00:00"
+			},
+			{
+				"name": "Dr. Martin Luther King, Jr. Day (District Closed)",
+				"date": "2027-01-18T00:00:00"
+			},
+			{
+				"name": "Presidents' Day (District Closed)",
+				"date": "2027-02-15T00:00:00"
+			},
+			{
+				"name": "Staff PD – Abbrev. day for Students",
+				"date": "2027-02-22T00:00:00"
+			},
+			{
+				"name": "Evening P/T Conferences – Abbrev. day for Students",
+				"date": "2027-03-17T00:00:00"
+			},
+			{
+				"name": "Afternoon P/T Conferences – Abbrev. day for Students",
+				"date": "2027-03-18T00:00:00"
+			},
+			{
+				"name": "Spring Break (Schools Closed)",
+				"date": "2027-03-22T00:00:00"
+			},
+			{
+				"name": "Good Friday (District Closed)",
+				"date": "2027-03-26T00:00:00"
+			},
+			{
+				"name": "Memorial Day (District Closed)",
+				"date": "2027-05-31T00:00:00"
+			},
+			{
+				"name": "Election Day - Staff PD (Schools Closed)",
+				"date": "2027-06-08T00:00:00"
+			},
+			{
+				"name": "Juneteenth (District Closed)",
+				"date": "2027-06-18T00:00:00"
+			},
+			{
+				"name": "Early Dismissal for Students",
+				"date": "2027-06-21T00:00:00"
+			},
+			{
+				"name": "Early Dismissal/Last Day for Students & Staff, H.S. Graduation",
+				"date": "2027-06-22T00:00:00"
+			},
+
+			// --- 2027–2028 School Year ---
+			{
+				"name": "District Closed – Observance of Independence Day",
+				"date": "2027-07-05T00:00:00"
+			},
+			{
+				"name": "New Teacher Orientation",
+				"date": "2027-08-24T00:00:00"
+			},
+			{
+				"name": "Non-Tenure Staff PD",
+				"date": "2027-08-25T00:00:00"
+			},
+			{
+				"name": "Freshman & New Student Orientation",
+				"date": "2027-08-25T00:00:00"
+			},
+			{
+				"name": "Staff Convocation",
+				"date": "2027-09-01T00:00:00"
+			},
+			{
+				"name": "Staff PD",
+				"date": "2027-09-02T00:00:00"
+			},
+			{
+				"name": "Staff PD – Abbrev. day for Staff",
+				"date": "2027-09-03T00:00:00"
+			},
+			{
+				"name": "Labor Day (District Closed)",
+				"date": "2027-09-06T00:00:00"
+			},
+			{
+				"name": "First Day for Students",
+				"date": "2027-09-07T00:00:00"
+			},
+			{
+				"name": "Indigenous People's Day/Columbus Day (District Closed)",
+				"date": "2027-10-11T00:00:00"
+			},
+			{
+				"name": "Evening Middle & High P/T Conferences / PD Elem. Abbrev. day",
+				"date": "2027-10-20T00:00:00"
+			},
+			{
+				"name": "Afternoon Middle & High P/T Conferences / PD Elem. Abbrev. day",
+				"date": "2027-10-21T00:00:00"
+			},
+			{
+				"name": "Election Day (Staff PD, Schools Closed)",
+				"date": "2027-11-02T00:00:00"
+			},
+			{
+				"name": "NJEA Convention (District Closed)",
+				"date": "2027-11-04T00:00:00"
+			},
+			{
+				"name": "Veteran's Day (District Closed)",
+				"date": "2027-11-11T00:00:00"
+			},
+			{
+				"name": "Abbreviated Day for Students & Staff",
+				"date": "2027-11-24T00:00:00"
+			},
+			{
+				"name": "Thanksgiving (District Closed)",
+				"date": "2027-11-25T00:00:00"
+			},
+			{
+				"name": "Evening Elem. P/T Conferences / PD Middle & High Abbrev. day",
+				"date": "2027-12-08T00:00:00"
+			},
+			{
+				"name": "Afternoon Elem. P/T Conferences / PD Middle & High Abbrev. day",
+				"date": "2027-12-09T00:00:00"
+			},
+			{
+				"name": "Early Dismissal for Students & Staff",
+				"date": "2027-12-23T00:00:00"
+			},
+			{
+				"name": "Christmas Holiday (District Closed)",
+				"date": "2027-12-24T00:00:00"
+			},
+			{
+				"name": "Winter Break (Schools Closed)",
+				"date": "2027-12-28T00:00:00"
+			},
+			{
+				"name": "New Year's holiday (District closed)",
+				"date": "2027-12-31T00:00:00"
+			},
+			{
+				"name": "District Reopens",
+				"date": "2028-01-03T00:00:00"
+			},
+			{
+				"name": "Staff PD – Abbrev. day for Students",
+				"date": "2028-01-10T00:00:00"
+			},
+			{
+				"name": "Dr. Martin Luther King, Jr. Day (District Closed)",
+				"date": "2028-01-17T00:00:00"
+			},
+			{
+				"name": "Staff Prof. Learning – Abbrev. day for Students",
+				"date": "2028-02-07T00:00:00"
+			},
+			{
+				"name": "President's Day (District Closed)",
+				"date": "2028-02-21T00:00:00"
+			},
+			{
+				"name": "Staff Prof. Learning – Abbrev. day for students",
+				"date": "2028-03-06T00:00:00"
+			},
+			{
+				"name": "Evening P/T Conferences – Abbrev. day for Students",
+				"date": "2028-03-22T00:00:00"
+			},
+			{
+				"name": "Afternoon P/T Conferences – Abbrev. day for Students",
+				"date": "2028-03-23T00:00:00"
+			},
+			{
+				"name": "Spring Break (Schools Closed)",
+				"date": "2028-04-10T00:00:00"
+			},
+			{
+				"name": "Good Friday (District Closed)",
+				"date": "2028-04-14T00:00:00"
+			},
+			{
+				"name": "Memorial Day weekend (District Closed)",
+				"date": "2028-05-26T00:00:00"
+			},
+			{
+				"name": "Memorial Day (District Closed)",
+				"date": "2028-05-29T00:00:00"
+			},
+			{
+				"name": "Staff PD (Schools Closed)",
+				"date": "2028-06-13T00:00:00"
+			},
+			{
+				"name": "Juneteenth (District Closed)",
+				"date": "2028-06-19T00:00:00"
+			},
+			{
+				"name": "Abbreviated Day for Students and Staff",
+				"date": "2028-06-20T00:00:00"
+			},
+			{
+				"name": "Abbreviated Day and Last Day for Students and Staff",
+				"date": "2028-06-21T00:00:00"
+			},
+			{
+				"name": "High School Graduation",
+				"date": "2028-06-21T00:00:00"
+			}
+		];
+
+        function updateCountdowns() {
+            const now = new Date();
+            const container = document.getElementById("events");
+            const currentDateDiv = document.getElementById("current-date");
+            currentDateDiv.textContent = `Today's Date: ${now.toLocaleString()}`;
+            container.innerHTML = "";
+            let closestEvent = null;
+            let closestTime = Infinity;
+
+            events.forEach(event => {
+                const eventDate = new Date(event.date);
+                const timeDiff = eventDate - now;
+                if (timeDiff > 0 && timeDiff < closestTime) {
+                    closestEvent = event;
+                    closestTime = timeDiff;
+                }
+                const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+                const isPast = timeDiff <= 0;
+                const eventDiv = document.createElement("div");
+                eventDiv.className = `event${isPast ? " past" : ""}`;
+                eventDiv.innerHTML = `
+                    <strong>${event.name}</strong><br>
+			          		<span class="event-date">${eventDate.toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span><br>
+                    <span class="countdown">${isPast ? "Event has passed." : `${days}d ${hours}h ${minutes}m ${seconds}s`}</span>
+                `;
+                container.appendChild(eventDiv);
+                eventDiv.addEventListener("click", () => handleEventClick(event));
+            });
+
+            if (closestEvent) {
+                const closestElement = Array.from(container.children).find(div =>
+                    div.textContent.includes(closestEvent.name)
+                );
+                if (closestElement) {
+                    closestElement.style.border = "2px solid #ff8400";
+                    /*closestElement.style.border = "2px solid #e3b58d";*/
+                    
+                    
+                    closestElement.style.backgroundColor = "#fff7eb";
+                }
+            }
+        }
+        
+        function generateICSFile(event) {
+          const startDate = new Date(event.date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+          /*const endDate = new Date(new Date(event.date).getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/[-:]/g,
+          '').split('.')[0] + 'Z';*/
+          const endDate = new Date(new Date(event.date).setDate(new Date(event.date).getDate() + 1))
+              .toISOString().split('T')[0].replace(/-/g, '');
+          const icsContent =
+          `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${event.name}\nDTSTART:${startDate}\nDTEND:${endDate}\nDESCRIPTION:FRC Event Team 555 \nEND:VEVENT\nEND:VCALENDAR`;
+          const blob = new Blob([icsContent], { type: 'text/calendar' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${event.name.replace(/\s+/g, '_')}.ics`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+        
+        function handleEventClick(event) {
+			const eventDate = new Date(event.date);
+			const startISO = eventDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+			const endISO = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+			generateICSFile(event);
+			if (navigator.userAgent.includes("Android")) {
+				window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${startISO}/${endISO}`, '_blank').focus();
+			}
+        }
+
+        setInterval(updateCountdowns, 1000);
+        updateCountdowns();
+	</script>
+</body>
+
+</html>
+
+<!-- webcal://. comgooglecalendar:// -->

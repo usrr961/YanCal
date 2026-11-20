@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Bell Schedule App</title>
+	<style>
+		:root {
+			--primary: #1c4a72;
+			--bg: #f5f5f5;
+			--text: #333;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			font-family: sans-serif;
+			background: var(--bg);
+			color: var(--text);
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh;
+		}
+
+		header {
+			background: var(--primary);
+			color: #fff;
+			padding: 1rem;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+		}
+
+		header h1 {
+			margin: 0;
+			font-size: 1.25rem;
+		}
+
+		header .left,
+		header .nav {
+			display: flex;
+			gap: .5rem;
+		}
+
+		header button {
+			background: #fff;
+			color: var(--primary);
+			border: none;
+			padding: .5rem 1rem;
+			border-radius: 4px;
+			cursor: pointer;
+			white-space: nowrap;
+		}
+
+		main {
+			flex: 1;
+			padding: 1rem;
+		}
+
+		.periods {
+			list-style: none;
+			padding: 0;
+			margin: 1rem 0;
+		}
+
+		.periods li {
+			padding: .75rem;
+			margin-bottom: .5rem;
+			background: #fff;
+			border-left: 4px solid var(--primary);
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.periods li.past {
+			text-decoration: line-through;
+			opacity: .6;
+		}
+
+		.periods li.current {
+			background: var(--primary);
+			color: #fff;
+			font-weight: bold;
+		}
+
+		/* Calendar view */
+		.calendar {
+			display: none;
+			margin-top: 1rem;
+		}
+
+		.calendar table {
+			width: 100%;
+			border-collapse: collapse;
+			background: #fff;
+		}
+
+		.calendar th,
+		.calendar td {
+			border: 1px solid #ddd;
+			width: 14.28%;
+			padding: .5rem;
+			text-align: center;
+			vertical-align: top;
+			cursor: pointer;
+		}
+
+		.calendar td:hover {
+			background: #f0f0f0;
+		}
+
+		.calendar .today {
+			background: var(--primary);
+			color: #ad8672;
+		}
+
+		/* Setup & Import forms */
+		.card {
+			background: #fff;
+			padding: 1rem;
+			border-radius: 4px;
+			max-width: 400px;
+			margin: 2rem auto;
+		}
+
+		.card h2 {
+			margin-top: 0;
+		}
+
+		.card label {
+			display: block;
+			margin-top: .5rem;
+		}
+
+		.card input {
+			width: 100%;
+			padding: .5rem;
+			margin-top: .25rem;
+		}
+
+		.card button {
+			margin-top: 1rem;
+			background: var(--primary);
+			color: #fff;
+			border: none;
+			padding: .5rem 1rem;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+	</style>
+</head>
+
+<body>
+	<header>
+		<div class="left">
+			<button id="importBtn">Import Schedule</button>
+			<button id="dailyViewBtn">Daily</button>
+			<button id="monthViewBtn">Monthly</button>
+		</div>
+		<h1 id="viewTitle">Bell Schedule</h1>
+		<div class="nav">
+			<button id="prevDay">&larr; Prev</button>
+			<button id="nextDay">Next &rarr;</button>
+		</div>
+	</header>
+
+	<main>
+		<!-- Import JSON -->
+		<div id="import" class="card" style="display:none">
+			<h2>Import Schedule JSON</h2>
+			<p>Import schedule file </p>
+			<input type="file" id="scheduleFile" accept=".json" />
+    </div>
+
+			<!-- Class setup -->
+			<div id="setup" class="card" style="display:none">
+				<h2>Enter Your Class Names</h2>
+				<form id="setupForm">
+					<label>P1<input name="P1" required /></label>
+					<label>P2<input name="P2" required /></label>
+					<label>P3<input name="P3" required /></label>
+					<label>P4<input name="P4" required /></label>
+					<label>P5 (Lunch)<input name="P5" value="Lunch" required /></label>
+					<label>P6<input name="P6" required /></label>
+					<label>P7<input name="P7" required /></label>
+					<label>P8<input name="P8" required /></label>
+					<label>P9<input name="P9" required /></label>
+					<button type="submit">Save Classes</button>
+				</form>
+			</div>
+
+			<!-- Daily view -->
+			<div id="daily" style="display:none">
+				<h2 id="dateHeader"></h2>
+				<ul id="periodList" class="periods"></ul>
+			</div>
+
+			<!-- Calendar view -->
+			<div id="calendar" class="calendar">
+        <h2 id="monthName">xx</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Sun</th>
+							<th>Mon</th>
+							<th>Tue</th>
+							<th>Wed</th>
+							<th>Thu</th>
+							<th>Fri</th>
+							<th>Sat</th>
+						</tr>
+					</thead>
+					<tbody id="calBody"></tbody>
+				</table>
+			</div>
+	</main>
+
+	<script>
+		// --- Load stored schedule and classes ---
+    let scheduleData = JSON.parse(localStorage.getItem('scheduleData') || 'null');
+    let classes      = JSON.parse(localStorage.getItem('myClasses')   || 'null');
+    // App state
+    let currentDate = new Date();
+    calendarMonth = new Date();
+    // DOM refs
+    const importDiv = document.getElementById('import');
+    const setupDiv  = document.getElementById('setup');
+    const dailyDiv  = document.getElementById('daily');
+    const calDiv    = document.getElementById('calendar');
+    const navDiv    = document.querySelector('.nav');
+    const viewTitle = document.getElementById('viewTitle');
+
+    // Show import UI if no scheduleData
+    function showImport(){
+      importDiv.style.display = 'block';
+      setupDiv.style.display  = 'none';
+      dailyDiv.style.display  = 'none';
+      calDiv.style.display    = 'none';
+      navDiv.style.display    = 'none';
+      viewTitle.textContent   = 'Import Schedule';
+    }
+
+    // On file select
+    document.getElementById('scheduleFile').onchange = e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const obj = JSON.parse(ev.target.result);
+          scheduleData = obj;
+          localStorage.setItem('scheduleData', JSON.stringify(obj));
+          importDiv.style.display = 'none';
+          proceedAfterImport();
+        } catch(err) {
+          alert('Error: invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    function proceedAfterImport(){
+      if(!classes) {
+        setupDiv.style.display = 'block';
+        viewTitle.textContent  = 'Setup Classes';
+      } else {
+        initApp();
+      }
+    }
+
+    // Setup classes form
+    document.getElementById('setupForm').onsubmit = e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      classes = {};
+      ['P1','P2','P3','P4','P5','P6','P7','P8','P9'].forEach(p => {
+        classes[p] = fd.get(p);
+      });
+      localStorage.setItem('myClasses', JSON.stringify(classes));
+      setupDiv.style.display = 'none';
+      initApp();
+    };
+
+    // If no schedule, prompt import; else if no classes, prompt setup; else start
+    if(!scheduleData) {
+      showImport();
+    } else if(!classes) {
+      setupDiv.style.display = 'block';
+      viewTitle.textContent  = 'Setup Classes';
+    } else {
+      initApp();
+    }
+
+    // Helpers
+    function ymd(d){ return d.toISOString().slice(0,10); }
+    function addDays(d,n){ let x=new Date(d); x.setDate(x.getDate()+n); return x; }
+    function parseHM(s){ let [h,m]=s.split(':'); let d=new Date(); d.setHours(+h, +m,0,0); return d; }
+
+ 
+
+    // Initialize app UI events
+    function initApp(){
+      document.getElementById('importBtn').onclick   = showImport;
+      document.getElementById('dailyViewBtn').onclick = showDaily;
+      document.getElementById('monthViewBtn').onclick= showCalendar;
+      document.getElementById('prevDay').onclick = () => {
+        if (dailyDiv.style.display !== 'none') {
+          currentDate = addDays(currentDate, -1);
+          showDaily();
+        } else {
+          calendarMonth.setMonth(calendarMonth.getMonth() - 1);
+          renderCalendar();
+        }
+      };
+	
+      document.getElementById('nextDay').onclick = () => {
+        if (dailyDiv.style.display !== 'none') {
+          currentDate = addDays(currentDate, 1);
+          showDaily();
+        } else {
+          calendarMonth.setMonth(calendarMonth.getMonth() + 1);
+          renderCalendar();
+        }
+      };
+      showDaily();
+    }
+
+    // Show daily view
+    function showDaily(){
+      importDiv.style.display = 'none';
+      setupDiv.style.display  = 'none';
+      calDiv.style.display    = 'none';
+      dailyDiv.style.display  = 'block';
+      navDiv.style.display    = 'flex';
+      viewTitle.textContent   = 'Daily View';
+      renderDaily();
+    }
+
+    // Show calendar view
+    function showCalendar(){
+      importDiv.style.display = 'none';
+      setupDiv.style.display  = 'none';
+      dailyDiv.style.display  = 'none';
+      calDiv.style.display    = 'block';
+      navDiv.style.display    = 'flex';
+      viewTitle.textContent   = 'Monthly View';
+      renderCalendar();
+    }
+
+    // Render daily schedule
+    function renderDaily(){
+      const hd = document.getElementById('dateHeader');
+      const ul = document.getElementById('periodList');
+      ul.innerHTML = '';
+      const key = ymd(currentDate);
+      const info = scheduleData[key];
+      hd.textContent = currentDate.toDateString() + (info ? ` — ${info.type} Day` : ' — No Schedule');
+      if(!info) return;
+      const arr = Object.entries(info.schedule)
+        .sort((a,b)=> parseHM(a[1]) - parseHM(b[1]));
+      const now = new Date();
+      let currentIdx = -1;
+      if(ymd(now)===key){
+        for(let i=0;i<arr.length;i++){
+          const start = parseHM(arr[i][1]);
+          const end   = (i+1<arr.length)? parseHM(arr[i+1][1]) : parseHM(info.end);
+          if(now>=start && now<end){ currentIdx=i; break; }
+        }
+      }
+      arr.forEach(([prd, t], i)=>{
+        const li = document.createElement('li');
+        const name = prd==='L' ? 'Lunch' : classes['P'+prd]||'';
+        const [h, m] = t.split(':').map(Number);
+        const displayH = (h % 12) || 12;
+        const displayTime = `${displayH}:${m.toString().padStart(2, '0')}`;
+        li.textContent = ` ${prd}: ${displayTime} — ${name}`;
+        if(i<currentIdx) li.classList.add('past');
+        if(i===currentIdx) {
+          li.classList.add('current');
+
+          // Add countdown span
+          const countdownSpan = document.createElement('span');
+          countdownSpan.style.float = 'right';
+          countdownSpan.style.fontWeight = 'bold';
+          countdownSpan.style.marginLeft = '10px';
+          li.appendChild(countdownSpan);
+
+          // Start countdown
+          const updateCountdown = () => {
+            const now = new Date();
+            const end = (i + 1 < arr.length) ? parseHM(arr[i + 1][1]) : parseHM(info.end);
+            const diff = Math.max(0, end - now);
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            countdownSpan.textContent = `${mins}:${secs.toString().padStart(2, '0')} left`;
+          };
+          updateCountdown();
+          clearInterval(li._interval);
+          li._interval = setInterval(updateCountdown, 1000);
+        }
+
+        ul.appendChild(li);
+      });
+    }
+
+    // Render 4‑week calendar
+    function renderCalendar() {
+      const tbody = document.getElementById('calBody');
+      tbody.innerHTML = '';
+
+      const year = calendarMonth.getFullYear();
+      const month = calendarMonth.getMonth();
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"];
+
+      // Show the month name
+      document.getElementById('monthName').textContent = `${monthNames[month]} ${year}`;
+
+      // Start from the first Sunday before or on the 1st of this month
+      let firstDay = new Date(year, month, 1);
+      firstDay.setDate(firstDay.getDate() - firstDay.getDay());
+
+      for (let w = 0; w < 6; w++) {
+        const tr = document.createElement('tr');
+        for (let d = 0; d < 7; d++) {
+          const dt = new Date(firstDay);
+          dt.setDate(firstDay.getDate() + w * 7 + d);
+          const key = ymd(dt);
+
+          const td = document.createElement('td');
+          td.textContent = dt.getDate();
+          td.style.cursor = 'pointer';
+          td.style.position = 'relative';
+
+          // Gray out days not in current month
+          if (dt.getMonth() !== month) {
+            td.style.opacity = '0.4';
+          }
+
+          // Show letter day
+          if (scheduleData[key]) {
+            const sp = document.createElement('div');
+            sp.textContent = scheduleData[key].type;
+            sp.style.marginTop = '4px';
+            sp.style.fontSize = '0.85em';
+            sp.style.fontWeight = 'bold';
+            sp.style.color = '#ad8672';
+            td.appendChild(sp);
+          }
+
+          // Highlight today
+          if (key === ymd(new Date())) {
+            td.classList.add('today');
+          }
+
+          // Click to go to day view
+          td.onclick = () => {
+            currentDate = dt;
+            showDaily();
+          };
+
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+
+	</script>
+</body>
+
+</html>

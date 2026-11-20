@@ -1,0 +1,1062 @@
+<!doctype html><html><head></head><body><!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Bell Schedule Generator</title>
+	<link rel="icon" type="image/png" href="/logo.png">
+	<style>
+		:root {
+			--primary: #1c4a72;
+			--primary-light: #2a6f97;
+			--bg: #f0f4f8;
+			--text: #333;
+			--white: #fff;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: sans-serif;
+			background: var(--bg);
+			color: var(--text);
+			padding: 1rem;
+		}
+
+		h1 {
+			margin-bottom: 1rem;
+			color: var(--primary);
+		}
+
+		label {
+			display: block;
+			margin: 0.5rem 0 0.2rem;
+		}
+
+		input,
+		select {
+			width: 100%;
+			padding: 0.5rem;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			margin-bottom: 0.5rem;
+		}
+
+		button {
+			background: var(--primary);
+			color: var(--white);
+			border: none;
+			padding: 0.6rem 1.2rem;
+			margin: 0.5rem 0.2rem 0;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+
+		button:hover {
+			background: var(--primary-light);
+		}
+
+		.flex {
+			display: flex;
+			gap: 1rem;
+			flex-wrap: wrap;
+		}
+
+		.flex>div {
+			flex: 1;
+			min-width: 200px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 0.5rem;
+			margin-bottom: 50px;
+		}
+
+		th,
+		td {
+			border: 1px solid #ddd;
+			padding: 0.5rem;
+			text-align: left;
+		}
+
+		th {
+			background: var(--primary);
+			color: var(--white);
+		}
+
+		#fullScheduleTable,
+		#customTable {
+			max-height: 300px;
+			overflow-y: scroll;
+			display: block;
+		}
+
+		/* Modal */
+		.modal-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, 0.5);
+			display: none;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.modal {
+			background: var(--white);
+			padding: 1.5rem;
+			border-radius: 8px;
+			width: 100%;
+			max-width: 500px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+			max-height: 400px;
+			overflow-y: scroll;
+		}
+
+		.modal header {
+			font-size: 1.25rem;
+			margin-bottom: 0.5rem;
+			color: var(--primary);
+		}
+
+		.modal .close {
+			float: right;
+			cursor: pointer;
+			font-size: 1.2rem;
+		}
+
+		.tabs {
+			display: flex;
+			margin-bottom: 1rem;
+		}
+
+		.tab {
+			flex: 1;
+			padding: 0.5rem;
+			text-align: center;
+			cursor: pointer;
+			background: #ddd;
+		}
+
+		.tab.active {
+			background: var(--primary);
+			color: var(--white);
+		}
+
+		.tab-content {
+			display: none;
+		}
+
+		.tab-content.active {
+			display: block;
+		}
+	</style>
+	<!-- Firebase Scripts (v8.0.1) -->
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-app.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-firestore.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-auth.js"></script>
+</head>
+
+<body>
+	<!-- Top-Right Action Bar (Push Schedule + Auth State) -->
+	<div style="position: fixed; top: 10px; right: 10px; z-index: 10000; display: flex; gap: 0.5rem; align-items: center;">
+		<button id="pushFirestore" style="display:none; margin: 0;">Push Schedule to Firestore</button>
+		<button id="authStateBtn" style="margin: 0;">Sign In</button>
+	</div>
+	<h1>Bell Schedule Generator</h1>
+	<div class="flex">
+		<div>
+			<label for="startDate">Start Date</label>
+			<input type="date" id="startDate" />
+    </div>
+			<div>
+				<label for="endDate">End Date</label>
+				<input type="date" id="endDate" />
+    </div>
+				<div>
+					<label for="sequence">Letter Sequence (comma‑sep)</label>
+					<input type="text" id="sequence" value="A,B,C,D" />
+    </div>
+				</div>
+				<div class="flex">
+					<button id="addCustom">Add Custom Day</button>
+					<button id="settingsBtn">Settings</button>
+					<button id="generate">Generate Schedule</button>
+					<button id="export">Export JSON</button>
+					<button id="exportCsv">Export CSV</button>
+          <button id="importJson">Import JSON</button>
+          <input type="file" id="jsonFileInput" accept="application/json" style="display: none;" />
+				</div>
+				<table id="customTable">
+					<thead>
+						<tr>
+							<th>Date</th>
+							<th>Type</th>
+							<th>Length</th>
+							<th>Resume On</th>
+							<th>Schedule</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+				<div id="fullScheduleTable">
+					<table>
+						<thead>
+							<tr>
+								<th>Date</th>
+								<th>Day</th>
+								<th>Type</th>
+								<th>Length</th>
+								<th>Resume On</th>
+								<th>Schedule</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="scheduleBody"></tbody>
+					</table>
+				</div>
+        <!-- Organization Prompt Modal -->
+        <div class="modal-overlay" id="orgPromptModal" style="display:none; align-items:center; justify-content:center;">
+          <div class="modal">
+            <header>
+              <span>Enter Organization Name</span>
+              <span class="close" id="closeOrgModal">&times;</span>
+            </header>
+            <div class="modal-body">
+              <label for="orgNameInput">Organization Name:</label>
+              <input type="text" id="orgNameInput" placeholder="Enter organization name" />
+            </div>
+              <div style="text-align:right; margin-top: 1rem;">
+                <button id="cancelOrg">Cancel</button>
+                <button id="confirmOrg">Push Schedule</button>
+              </div>
+            </div>
+          </div>
+        <!-- Auth Modal -->
+        <div class="modal-overlay" id="authModal" style="display:none; align-items:center; justify-content:center; z-index: 10001;">
+          <div class="modal">
+            <header>
+              <span id="authModalTitle">Account &amp; Sign In</span>
+              <span class="close" id="closeAuthModal">&times;</span>
+            </header>
+            <div class="modal-body" id="authModalBody">
+              <!-- Signed-in status view -->
+              <div id="authSignedInView" style="display:none;">
+                <p style="margin-bottom: 0.5rem;"><strong>Status:</strong> <span id="authStatusBadge" style="color: #1b7a3d; font-weight: bold;">Signed In</span></p>
+                <p style="margin-bottom: 0.35rem;"><strong>Provider:</strong> <span id="authProviderText">-</span></p>
+                <p style="margin-bottom: 0.35rem;"><strong>Email:</strong> <span id="authEmailText">-</span></p>
+                <p style="margin-bottom: 0.75rem; font-size: 0.85rem; color: #666;"><strong>UID:</strong> <span id="authUidText">-</span></p>
+                <div style="text-align:right; margin-top: 1rem;">
+                  <button id="signOutBtn" style="background: #b02a37;">Sign Out</button>
+                </div>
+              </div>
+              <!-- Signed-out / Sign-in options view -->
+              <div id="authSignedOutView">
+                <p style="margin-bottom: 0.75rem; color: #555;">You are currently not signed in. Choose a sign-in method below:</p>
+                <button id="googleSignInBtn" style="width: 100%; margin: 0 0 0.5rem 0; background: #4285F4;">Sign in with Google</button>
+                <button id="toggleEmailSignInBtn" style="width: 100%; margin: 0 0 0.5rem 0;">Sign in with Email</button>
+                <div id="emailAuthForm" style="display:none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #ddd;">
+                  <label for="authEmailInput">Email</label>
+                  <input type="email" id="authEmailInput" placeholder="you@example.com" />
+                  <label for="authPasswordInput">Password</label>
+                  <input type="password" id="authPasswordInput" placeholder="Password" />
+                  <div style="display:flex; gap: 0.5rem; margin-top: 0.5rem;">
+                    <button id="emailSignInSubmitBtn" style="flex:1; margin:0;">Sign In</button>
+                    <button id="emailSignUpSubmitBtn" style="flex:1; margin:0; background: var(--primary-light);">Create Account</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+				<!-- Modal Overlay -->
+				<div class="modal-overlay" id="modalOverlay">
+					<div class="modal">
+						<header>
+							<span id="modalTitle">Modal</span>
+							<span class="close" id="closeModal">&times;</span>
+						</header>
+						<!-- Tabs -->
+						<div class="tabs">
+							<div class="tab active" data-tab="custom">Custom Day</div>
+							<div class="tab" data-tab="settings">Settings</div>
+						</div>
+						<!-- Custom Day Tab -->
+						<div class="tab-content active" id="tab-custom">
+							<!-- Checkbox to toggle multiple-day range -->
+							<label style="display:inline;height:10px;" >
+              <input type="checkbox" id="rangeToggle" /> Use date range</label>
+							<label for="customStartDate">Start Date</label>
+							<input type="date" id="customStartDate" />
+							<!-- End Date input that will be hidden unless toggle is checked -->
+							<div id="endDateContainer" style="display: none;">
+								<label for="customEndDate">End Date</label>
+								<input type="date" id="customEndDate" />
+        </div>
+								<label for="customType">Type Label</label>
+								<input type="text" id="customType" placeholder="e.g. A, B, C, D, E, NS" />
+								<label for="customLength">Day Length</label>
+								<select id="customLength">
+                  <option value="full">Full</option>
+                  <option value="abbreviated">Abbreviated</option>
+                  <option value="delayed">Delayed</option>
+                  <option value="E">E Day</option>
+				          <option value="eAbbr">E (Abbreviated)</option>
+                  <option value="NS">NS (No School)</option>
+                </select>
+								<label for="customResume">Resume On (Letter)</label>
+								<input type="text" id="customResume" placeholder="e.g. B" />
+								<label for="customSchedule">Custom Schedule CSV</label>
+								<input type="text" id="customSchedule" placeholder="e.g. 1,2,3,L,6,7,8" />
+								<button id="saveCustom">Save Custom</button>
+							</div>
+							<!-- Settings Tab -->
+							<div class="tab-content" id="tab-settings">
+								<h3>Period Durations (minutes)</h3>
+								<label>Normal:</label>
+								<input type="number" id="durNormal" value="57" />
+								<label>Abbreviated/Delayed:</label>
+								<input type="number" id="durShort" value="40" />
+								<label>E Day:</label>
+								<input type="number" id="durEDay" value="38" />
+								<label>Lunch:</label>
+								<input type="number" id="durLunch" value="57" />
+								<h3>Start/End Times</h3>
+								<label>Full Start:</label>
+								<input type="time" id="timeFullStart" value="08:00" />
+								<label>Full End:</label>
+								<input type="time" id="timeFullEnd" value="14:33" />
+								<label>Abbrev Start:</label>
+								<input type="time" id="timeAbbrevStart" value="08:00" />
+								<label>Abbrev End:</label>
+								<input type="time" id="timeAbbrevEnd" value="13:10" />
+								<label>Delayed Start:</label>
+								<input type="time" id="timeDelayedStart" value="10:00" />
+								<label>Delayed End:</label>
+								<input type="time" id="timeDelayedEnd" value="14:33" />
+								<h3>Default Sequences</h3>
+								<label>A Day:</label>
+								<input type="text" id="seqA" value="1,2,3,L,6,7,8" />
+								<label>B Day:</label>
+								<input type="text" id="seqB" value="2,3,4,L,7,8,9" />
+								<label>C Day:</label>
+								<input type="text" id="seqC" value="3,4,1,L,8,9,6" />
+								<label>D Day:</label>
+								<input type="text" id="seqD" value="4,1,2,L,9,6,7" />
+                <label>E Day:</label>
+                <input type="text" id="seqE" value="1,2,3,4,L,6,7,8,9" />
+								<button id="saveSettings">Save Settings</button>
+							</div>
+						</div>
+					</div>
+
+					<script>
+            (function () {
+              const firebaseConfig = {
+                apiKey: "AIzaSyAFreRZQyNL1TgLRFqahV7frEOTbWwK2no",
+                authDomain: "yancal.firebaseapp.com",
+                projectId: "yancal",
+                storageBucket: "yancal.firebasestorage.app",
+                messagingSenderId: "43607057377",
+                appId: "1:43607057377:web:c213aebf1ab4d6d61928a0",
+                measurementId: "G-BDL86XTVJX"
+              };
+
+              // Initialize Firebase
+              firebase.initializeApp(firebaseConfig);
+
+              // Optional: Initialize Firestore (if you plan to use Firestore)
+              const db = firebase.firestore();
+
+              const customDays = [];
+              let settings = {
+                durations: { normal: 57, short: 45, e: 43, lunch: 57, eAbbr: 32 },
+                times: {
+                  full: { start: '08:00', end: '14:33' },
+                  abbreviated: { start: '08:00', end: '13:20' },
+                  delayed: { start: '10:00', end: '14:33' }
+                },
+                sequences: {
+                  A: ['1', '2', '3', 'L', '6', '7', '8'],
+                  B: ['2', '3', '4', 'L', '7', '8', '9'],
+                  C: ['3', '4', '1', 'L', '8', '9', '6'],
+                  D: ['4', '1', '2', 'L', '9', '6', '7'],
+                  E: ['1', '2', '3', '4', 'L', '6', '7', '8', '9']
+                }
+              };
+              finalSchedule = {};
+
+              const modalOverlay = document.getElementById('modalOverlay');
+              const tabs = document.querySelectorAll('.tab');
+              const contents = document.querySelectorAll('.tab-content');
+              const settingsBtn = document.getElementById('settingsBtn');
+              const closeModalBtn = document.getElementById('closeModal');
+              const saveSettingsBtn = document.getElementById('saveSettings');
+              const addCustomBtn = document.getElementById('addCustom');
+              const saveCustomBtn = document.getElementById('saveCustom');
+              const customTableBody = document.querySelector('#customTable tbody');
+              const generateBtn = document.getElementById('generate');
+              const exportBtn = document.getElementById('export');
+              const scheduleBody = document.getElementById('scheduleBody');
+              const rangeToggle = document.getElementById('rangeToggle');
+              const endDateContainer = document.getElementById('endDateContainer');
+
+              tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                  tabs.forEach(t => t.classList.remove('active'));
+                  contents.forEach(c => c.classList.remove('active'));
+                  tab.classList.add('active');
+                  document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+                });
+              });
+
+              settingsBtn.addEventListener('click', () => openModal('settings'));
+              addCustomBtn.addEventListener('click', () => openModal('custom'));
+              closeModalBtn.addEventListener('click', () => modalOverlay.style.display = 'none');
+
+              // Toggle display of the End Date input
+              rangeToggle.addEventListener('change', () => {
+                endDateContainer.style.display = rangeToggle.checked ? 'block' : 'none';
+              });
+
+              function openModal(tab) {
+                document.getElementById('modalTitle').textContent = tab === 'settings' ? 'Settings' : 'Custom Day';
+                tabs.forEach(t => t.dataset.tab === tab ? t.classList.add('active') : t.classList.remove('active'));
+                contents.forEach(c => c.id === 'tab-' + tab ? c.classList.add('active') : c.classList.remove('active'));
+                if (tab === 'settings') {
+                  document.getElementById('durNormal').value = settings.durations.normal;
+                  document.getElementById('durShort').value = settings.durations.short;
+                  document.getElementById('durEDay').value = settings.durations.e;
+                  document.getElementById('durLunch').value = settings.durations.lunch;
+                  document.getElementById('timeFullStart').value = settings.times.full.start;
+                  document.getElementById('timeFullEnd').value = settings.times.full.end;
+                  document.getElementById('timeAbbrevStart').value = settings.times.abbreviated.start;
+                  document.getElementById('timeAbbrevEnd').value = settings.times.abbreviated.end;
+                  document.getElementById('timeDelayedStart').value = settings.times.delayed.start;
+                  document.getElementById('timeDelayedEnd').value = settings.times.delayed.end;
+                  document.getElementById('seqA').value = settings.sequences.A.join(',');
+                  document.getElementById('seqB').value = settings.sequences.B.join(',');
+                  document.getElementById('seqC').value = settings.sequences.C.join(',');
+                  document.getElementById('seqD').value = settings.sequences.D.join(',');
+                  document.getElementById('seqE').value = settings.sequences.E.join(',');
+                } else {
+                  // Clear custom day fields in modal
+                  ['customStartDate', 'customType', 'customLength', 'customResume', 'customSchedule'].forEach(id => document.getElementById(id).value = '');
+                  rangeToggle.checked = false;
+                  endDateContainer.style.display = 'none';
+                  document.getElementById('customEndDate').value = '';
+                }
+                modalOverlay.style.display = 'flex';
+              }
+
+              saveSettingsBtn.addEventListener('click', () => {
+                settings.durations.normal = parseInt(document.getElementById('durNormal').value);
+                settings.durations.short = parseInt(document.getElementById('durShort').value);
+                settings.durations.e = parseInt(document.getElementById('durEDay').value);
+                settings.durations.eAbbr = parseInt(32);
+                settings.durations.lunch = parseInt(document.getElementById('durLunch').value);
+                settings.times.full.start = document.getElementById('timeFullStart').value;
+                settings.times.full.end = document.getElementById('timeFullEnd').value;
+                settings.times.abbreviated.start = document.getElementById('timeAbbrevStart').value;
+                settings.times.abbreviated.end = document.getElementById('timeAbbrevEnd').value;
+                settings.times.delayed.start = document.getElementById('timeDelayedStart').value;
+                settings.times.delayed.end = document.getElementById('timeDelayedEnd').value;
+                settings.sequences.A = document.getElementById('seqA').value.split(',').map(s => s.trim());
+                settings.sequences.B = document.getElementById('seqB').value.split(',').map(s => s.trim());
+                settings.sequences.C = document.getElementById('seqC').value.split(',').map(s => s.trim());
+                settings.sequences.D = document.getElementById('seqD').value.split(',').map(s => s.trim());
+                settings.sequences.E = document.getElementById('seqE').value.split(',').map(s => s.trim());
+                modalOverlay.style.display = 'none';
+                renderCustomTable();
+              });
+
+              saveCustomBtn.addEventListener('click', () => {
+                const startDateVal = document.getElementById('customStartDate').value;
+                const customType = document.getElementById('customType').value.trim();
+                const length = document.getElementById('customLength').value;
+                const resume = document.getElementById('customResume').value.trim();
+                const schedCsv = document.getElementById('customSchedule').value.trim();
+
+                if (!startDateVal || !customType) {
+                  return alert('Start Date and Type are required');
+                }
+
+                const schedule = schedCsv ? schedCsv.split(',').map(s => s.trim()) : [];
+
+                if (rangeToggle.checked) {
+                  const endDateVal = document.getElementById('customEndDate').value;
+                  if (!endDateVal) {
+                    return alert('Please select an End Date for the range.');
+                  }
+                  let current = new Date(startDateVal);
+                  const end = new Date(endDateVal);
+                  while (current <= end) {
+                    const formatted = current.toISOString().slice(0, 10);
+                    const entry = { date: formatted, type: customType, length, resume, schedule };
+                    const idx = customDays.findIndex(d => d.date === formatted);
+                    if (idx >= 0) {
+                      customDays[idx] = entry;
+                    } else {
+                      customDays.push(entry);
+                    }
+                    current.setDate(current.getDate() + 1);
+                  }
+                } else {
+                  const formatted = startDateVal;
+                  const entry = { date: formatted, type: customType, length, resume, schedule };
+                  const idx = customDays.findIndex(d => d.date === formatted);
+                  if (idx >= 0) {
+                    customDays[idx] = entry;
+                  } else {
+                    customDays.push(entry);
+                  }
+                }
+
+                modalOverlay.style.display = 'none';
+                renderCustomTable();
+              });
+
+              function renderCustomTable() {
+                customTableBody.innerHTML = '';
+                customDays.forEach((d, i) => {
+                  const tr = document.createElement('tr');
+                  tr.innerHTML = `<td>${d.date}</td>
+                                              <td>${d.type}</td>
+                                              <td>${d.length}</td>
+                                              <td>${d.resume}</td>
+                                              <td>${d.schedule.join(',')}</td>
+                                              <td>
+                                                <button data-i="${i}" class="editCustom">Edit</button>
+                                                <button data-i="${i}" class="delCustom">Delete</button>
+                                              </td>`;
+                  customTableBody.appendChild(tr);
+                });
+                document.querySelectorAll('.editCustom').forEach(btn => btn.addEventListener('click', e => {
+                  const i = +e.target.dataset.i;
+                  const d = customDays[i];
+                  openModal('custom');
+                  setTimeout(() => {
+                    document.getElementById('customStartDate').value = d.date;
+                    document.getElementById('customType').value = d.type;
+                    document.getElementById('customLength').value = d.length;
+                    document.getElementById('customResume').value = d.resume;
+                    document.getElementById('customSchedule').value = d.schedule.join(',');
+                  }, 0);
+                }));
+                document.querySelectorAll('.delCustom').forEach(btn => btn.addEventListener('click', e => {
+                  customDays.splice(+e.target.dataset.i, 1);
+                  renderCustomTable();
+                }));
+              }
+
+              generateBtn.addEventListener('click', renderFullSchedule);
+              function renderFullSchedule() {
+                const start = document.getElementById('startDate').value;
+                const end = document.getElementById('endDate').value;
+                const seqOrder = document.getElementById('sequence').value.split(',').map(s => s.trim());
+                if (!start || !end) return alert('Select dates');
+                document.getElementById('pushFirestore').style.display = "block";
+                finalSchedule = {};
+                scheduleBody.innerHTML = '';
+                let idx = 0;
+                const customMap = Object.fromEntries(customDays.map(d => [d.date, d]));
+                const fmt = d => d.toISOString().slice(0, 10);
+                const wdName = d => d.toLocaleDateString('en-US', { weekday: 'long' });
+                let cur = parseLocalDate(start);
+                const endDate = parseLocalDate(end);
+                while (cur <= endDate) {
+                  const wd = cur.getDay();
+                  const ds = fmt(cur);
+                  if (wd !== 0 && wd !== 6) {
+                    if (customMap[ds]) {
+                      const cd = customMap[ds];
+                      if (cd.length === 'NS') {
+                        if (cd.resume) {
+                          const resumeIndex = seqOrder.indexOf(cd.resume);
+                          if (resumeIndex !== -1) {
+                            idx = resumeIndex;
+                          }
+                        }
+                        finalSchedule[ds] = { type: cd.type, length: 'NS', resume: cd.resume };
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${ds}</td>
+                                                    <td>${wdName(cur)}</td>
+                                                    <td>${cd.type}</td>
+                                                    <td>NS</td>
+                                                    <td>${cd.resume || ''}</td>
+                                                    <td></td>
+                                                    <td></td>`;
+                        scheduleBody.appendChild(tr);
+                      } else {
+                        const letter = cd.type;
+                        const lengthKey = cd.length;
+                        const resume = cd.resume;
+                        if (cd.resume) {
+                          const resumeIndex = seqOrder.indexOf(resume);
+                          if (resumeIndex !== -1) {
+                            idx = resumeIndex;
+                          }
+                        }
+                        const daySeq = cd.schedule.length ? cd.schedule : (settings.sequences[letter] || []);
+                        let timeType;
+                        if (lengthKey === 'abbreviated') timeType = 'abbreviated';
+                        else if (lengthKey === 'delayed') timeType = 'delayed';
+                        else timeType = 'full';
+                        const startTime = settings.times[timeType].start;
+                        const endTime = settings.times[timeType].end;
+                        let dur;
+                        if (lengthKey === 'E') dur = settings.durations.e;
+                        else if (lengthKey === 'full') dur = settings.durations.normal;
+                        else if (lengthKey === 'eAbbr') dur = settings.durations.eAbbr;
+                        else dur = settings.durations.short;
+                        const times = {};
+                        let [h, m] = startTime.split(':').map(Number);
+                        daySeq.forEach(p => {
+                          const hh = String(h).padStart(2, '0');
+                          const mm = String(m).padStart(2, '0');
+                          times[p] = `${hh}:${mm}`;
+                          m += (p === 'L' ? settings.durations.lunch : dur);
+                          h += Math.floor(m / 60);
+                          m %= 60;
+                        });
+                        finalSchedule[ds] = { type: letter, length: lengthKey, resume: resume, start: startTime, end: endTime, schedule: times };
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${ds}</td>
+                                                    <td>${wdName(cur)}</td>
+                                                    <td>${letter}</td>
+                                                    <td>${lengthKey}</td>
+                                                    <td>${resume || ''}</td>
+                                                    <td>${JSON.stringify(times)}</td>
+                                                    <td><button class="editSchedule" data-date="${ds}">Edit</button></td>`;
+                        scheduleBody.appendChild(tr);
+                      }
+                    } else {
+                      const letter = seqOrder[idx];
+                      idx = (idx + 1) % seqOrder.length;
+                      const daySeq = settings.sequences[letter] || [];
+                      const startTime = settings.times.full.start;
+                      const endTime = settings.times.full.end;
+                      const dur = settings.durations.normal;
+                      const times = {};
+                      let [h, m] = startTime.split(':').map(Number);
+                      daySeq.forEach(p => {
+                        const hh = String(h).padStart(2, '0');
+                        const mm = String(m).padStart(2, '0');
+                        times[p] = `${hh}:${mm}`;
+                        m += (p === 'L' ? settings.durations.lunch : dur);
+                        h += Math.floor(m / 60);
+                        m %= 60;
+                      });
+                      finalSchedule[ds] = { type: letter, length: 'full', start: startTime, end: endTime, schedule: times };
+                      const tr = document.createElement('tr');
+                      tr.innerHTML = `<td>${ds}</td>
+                                                  <td>${wdName(cur)}</td>
+                                                  <td>${letter}</td>
+                                                  <td>full</td>
+                                                  <td></td>
+                                                  <td>${JSON.stringify(times)}</td>
+                                                  <td><button class="editSchedule" data-date="${ds}">Edit</button></td>`;
+                      scheduleBody.appendChild(tr);
+                    }
+                  }
+                  cur.setDate(cur.getDate() + 1);
+                }
+                document.querySelectorAll('.editSchedule').forEach(btn => btn.addEventListener('click', e => {
+                  const date = e.target.dataset.date;
+                  const data = finalSchedule[date];
+                  openModal('custom');
+                  setTimeout(() => {
+                    document.getElementById('customStartDate').value = date;
+                    document.getElementById('customType').value = data.type;
+                    document.getElementById('customLength').value = data.length;
+                    document.getElementById('customResume').value = data.resume || '';
+                    document.getElementById('customSchedule').value = data.schedule ? Object.keys(data.schedule).join(',') : '';
+                  }, 0);
+                }));
+              }
+
+              function parseLocalDate(dateStr) {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                return new Date(year, month - 1, day);
+              }
+
+              exportBtn.addEventListener('click', () => {
+                const blob = new Blob([JSON.stringify(finalSchedule, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'bell_schedule.json';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+              });
+
+              const exportCsvBtn = document.getElementById('exportCsv');
+              exportCsvBtn.addEventListener('click', () => {
+                if (!finalSchedule || Object.keys(finalSchedule).length === 0) {
+                  return alert('No schedule to export. Generate first.');
+                }
+                const headers = [
+                  'date', 'type', 'length', 'resume', 'start', 'end',
+                  '1', '2', '3', '4', '6', '7', '8', '9', 'L'
+                ];
+                const rows = Object.keys(finalSchedule).sort().map(date => {
+                  const day = finalSchedule[date];
+                  const sched = day.schedule || {};
+                  return [
+                    date,
+                    day.type || '',
+                    day.length || '',
+                    day.resume || '',
+                    day.start || '',
+                    day.end || '',
+                    sched['1'] || '',
+                    sched['2'] || '',
+                    sched['3'] || '',
+                    sched['4'] || '',
+                    sched['6'] || '',
+                    sched['7'] || '',
+                    sched['8'] || '',
+                    sched['9'] || '',
+                    sched['L'] || ''
+                  ];
+                });
+                const csvContent = [
+                  headers,
+                  ...rows
+                ].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\r\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'bell_schedule.csv';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+              });
+
+            // Listen for the "Push Schedule to Firestore" button click
+            document.getElementById("pushFirestore").addEventListener("click", openOrgPrompt);
+
+            function openOrgPrompt() {
+              // Clear any previous input
+              document.getElementById("orgNameInput").value = "";
+              // Show the organization prompt modal (the new, separate modal)
+              document.getElementById("orgPromptModal").style.display = "flex";
+            }
+
+            // Close modal if the user clicks on the close icon or the Cancel button
+            document.getElementById("closeOrgModal").addEventListener("click", function () {
+              document.getElementById("orgPromptModal").style.display = "none";
+            });
+            document.getElementById("cancelOrg").addEventListener("click", function () {
+              document.getElementById("orgPromptModal").style.display = "none";
+            });
+
+            // When the user clicks the "Push Schedule" button in the modal, get the org name and push the data to Firestore
+            document.getElementById("confirmOrg").addEventListener("click", function () {
+              const orgName = document.getElementById("orgNameInput").value.trim();
+              if (!orgName) {
+                showToast("Organization name is required.");
+                return;
+              }
+              // Hide the modal while pushing
+              document.getElementById("orgPromptModal").style.display = "none";
+              pushToFirestore(orgName);
+            });
+
+            const auth = firebase.auth();
+            const authStateBtn = document.getElementById("authStateBtn");
+            const authModal = document.getElementById("authModal");
+            const closeAuthModal = document.getElementById("closeAuthModal");
+            const authSignedInView = document.getElementById("authSignedInView");
+            const authSignedOutView = document.getElementById("authSignedOutView");
+            const googleSignInBtn = document.getElementById("googleSignInBtn");
+            const toggleEmailSignInBtn = document.getElementById("toggleEmailSignInBtn");
+            const emailAuthForm = document.getElementById("emailAuthForm");
+            const emailSignInSubmitBtn = document.getElementById("emailSignInSubmitBtn");
+            const emailSignUpSubmitBtn = document.getElementById("emailSignUpSubmitBtn");
+            const signOutBtn = document.getElementById("signOutBtn");
+
+            function updateAuthUI(user) {
+              if (user && !user.isAnonymous) {
+                const label = user.displayName || user.email || "Signed In";
+                authStateBtn.textContent = label;
+                authSignedInView.style.display = "block";
+                authSignedOutView.style.display = "none";
+                document.getElementById("authStatusBadge").textContent = "Signed In";
+                document.getElementById("authStatusBadge").style.color = "#1b7a3d";
+                const providerId = (user.providerData && user.providerData[0]) ? user.providerData[0].providerId : "Account";
+                document.getElementById("authProviderText").textContent = providerId;
+                document.getElementById("authEmailText").textContent = user.email || "(No email)";
+                document.getElementById("authUidText").textContent = user.uid;
+              } else if (user && user.isAnonymous) {
+                authStateBtn.textContent = "Guest (Sign In)";
+                authSignedInView.style.display = "block";
+                authSignedOutView.style.display = "block";
+                document.getElementById("authStatusBadge").textContent = "Signed In (Anonymous Guest)";
+                document.getElementById("authStatusBadge").style.color = "#8a6d3b";
+                document.getElementById("authProviderText").textContent = "Anonymous";
+                document.getElementById("authEmailText").textContent = "N/A";
+                document.getElementById("authUidText").textContent = user.uid;
+              } else {
+                authStateBtn.textContent = "Sign In";
+                authSignedInView.style.display = "none";
+                authSignedOutView.style.display = "block";
+              }
+            }
+
+            auth.onAuthStateChanged((user) => {
+              updateAuthUI(user);
+            });
+
+            authStateBtn.addEventListener("click", () => {
+              updateAuthUI(auth.currentUser);
+              authModal.style.display = "flex";
+            });
+
+            closeAuthModal.addEventListener("click", () => {
+              authModal.style.display = "none";
+            });
+
+            googleSignInBtn.addEventListener("click", () => {
+              const provider = new firebase.auth.GoogleAuthProvider();
+              auth.signInWithPopup(provider)
+                .then((result) => {
+                  showToast("Signed in with Google as " + (result.user.email || result.user.displayName));
+                  authModal.style.display = "none";
+                })
+                .catch((error) => {
+                  showToast("Google sign-in error: " + error.message);
+                });
+            });
+
+            toggleEmailSignInBtn.addEventListener("click", () => {
+              emailAuthForm.style.display = emailAuthForm.style.display === "none" ? "block" : "none";
+            });
+
+            emailSignInSubmitBtn.addEventListener("click", () => {
+              const email = document.getElementById("authEmailInput").value.trim();
+              const password = document.getElementById("authPasswordInput").value;
+              if (!email || !password) {
+                showToast("Please enter both email and password.");
+                return;
+              }
+              auth.signInWithEmailAndPassword(email, password)
+                .then((result) => {
+                  showToast("Signed in as " + result.user.email);
+                  authModal.style.display = "none";
+                })
+                .catch((error) => {
+                  showToast("Email sign-in error: " + error.message);
+                });
+            });
+
+            emailSignUpSubmitBtn.addEventListener("click", () => {
+              const email = document.getElementById("authEmailInput").value.trim();
+              const password = document.getElementById("authPasswordInput").value;
+              if (!email || !password) {
+                showToast("Please enter both email and password.");
+                return;
+              }
+              auth.createUserWithEmailAndPassword(email, password)
+                .then((result) => {
+                  showToast("Account created & signed in as " + result.user.email);
+                  authModal.style.display = "none";
+                })
+                .catch((error) => {
+                  showToast("Sign-up error: " + error.message);
+                });
+            });
+
+            signOutBtn.addEventListener("click", () => {
+              auth.signOut()
+                .then(() => {
+                  showToast("Signed out.");
+                  emailAuthForm.style.display = "none";
+                })
+                .catch((error) => {
+                  showToast("Sign-out error: " + error.message);
+                });
+            });
+
+            // Function to push the schedule to Firestore under the provided organization name
+            function pushToFirestore(orgName) {
+              // Access Firestore and Auth (Firebase is already initialized)
+              const db = firebase.firestore();
+
+              const writeSchedule = () => {
+                // Push the global finalSchedule object to Firestore under the "org" collection with document ID = orgName.
+                return db.collection("org").doc(orgName).set(finalSchedule)
+                  .then(() => {
+                    showToast("Schedule pushed successfully.");
+                  })
+                  .catch((error) => {
+                    showToast("Error pushing schedule: " + error.message);
+                  });
+              };
+
+              if (auth.currentUser) {
+                writeSchedule();
+              } else {
+                auth.signInAnonymously()
+                  .then(() => writeSchedule())
+                  .catch((error) => {
+                    showToast("Error pushing schedule: " + error.message);
+                  });
+              }
+            }
+
+            // Reusable toast function for user notifications
+            function showToast(message) {
+              let toastContainer = document.getElementById("toastContainer");
+              if (!toastContainer) {
+                toastContainer = document.createElement("div");
+                toastContainer.id = "toastContainer";
+                toastContainer.style.position = "fixed";
+                toastContainer.style.bottom = "20px";
+                toastContainer.style.right = "20px";
+                toastContainer.style.zIndex = "10000";
+                document.body.appendChild(toastContainer);
+              }
+              const toast = document.createElement("div");
+              toast.textContent = message;
+              toast.style.background = "#333";
+              toast.style.color = "#fff";
+              toast.style.padding = "10px";
+              toast.style.marginTop = "10px";
+              toast.style.borderRadius = "4px";
+              toast.style.opacity = "1";
+              toastContainer.appendChild(toast);
+
+              setTimeout(() => {
+                toast.style.transition = "opacity 1s";
+                toast.style.opacity = "0";
+                setTimeout(() => {
+                  toastContainer.removeChild(toast);
+                }, 1000);
+              }, 3000);
+            }
+            // Listen for the Import JSON button click
+            document.getElementById("importJson").addEventListener("click", () => {
+              // Trigger the hidden file input when the button is clicked
+              document.getElementById("jsonFileInput").click();
+            });
+
+            // Handle the file selection event
+            document.getElementById("jsonFileInput").addEventListener("change", handleJsonFile, false);
+
+            function handleJsonFile(event) {
+              const file = event.target.files[0];
+              if (!file) return;
+
+              const reader = new FileReader();
+              reader.onload = function (e) {
+                try {
+                  // Parse the JSON data and assign it to finalSchedule
+                  finalSchedule = JSON.parse(e.target.result);
+
+                  // Render the schedule table from the imported JSON data
+                  renderImportedScheduleTable(finalSchedule);
+                  if (finalSchedule && Object.keys(finalSchedule).length > 0) {
+                    document.getElementById("pushFirestore").style.display = "block";
+                  }
+                } catch (err) {
+                  showToast("Error parsing JSON: " + err.message);
+                }
+              };
+              reader.readAsText(file);
+            }
+
+            // Function to render the schedule table using the imported JSON object
+            function renderImportedScheduleTable(schedule) {
+              const scheduleBody = document.getElementById("scheduleBody");
+              scheduleBody.innerHTML = ""; // Clear any previous schedule rows
+
+              // Iterate over the schedule object sorted by date keys
+              Object.keys(schedule)
+                .sort()
+                .forEach(function (date) {
+                  const data = schedule[date];
+                  const weekdayName = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+
+                  // Convert the schedule map (if present) to a JSON string for display
+                  const scheduleTimes = data.schedule ? JSON.stringify(data.schedule) : "";
+
+                  // Create a new table row for each date entry
+                  let tr = document.createElement("tr");
+                  tr.innerHTML = `<td>${date}</td>
+                                        <td>${weekdayName}</td>
+                                        <td>${data.type || ""}</td>
+                                        <td>${data.length || ""}</td>
+                                        <td>${data.resume || ""}</td>
+                                        <td>${scheduleTimes}</td>
+                                        <td><button class="editSchedule" data-date="${date}">Edit</button></td>`;
+                  scheduleBody.appendChild(tr);
+                });
+
+              // (Optional) Reattach event listeners to the edit buttons for inline editing.
+              document.querySelectorAll('.editSchedule').forEach(btn =>
+                btn.addEventListener('click', e => {
+                  const date = e.target.dataset.date;
+                  const data = finalSchedule[date];
+
+                  // Reuse your custom day modal to allow editing:
+                  openModal('custom');
+                  setTimeout(() => {
+                    document.getElementById('customStartDate').value = date;
+                    document.getElementById('customType').value = data.type;
+                    document.getElementById('customLength').value = data.length;
+                    document.getElementById('customResume').value = data.resume || '';
+                    document.getElementById('customSchedule').value = data.schedule ? Object.keys(data.schedule).join(',') : '';
+                  }, 0);
+                }));
+
+              showToast("Schedule imported successfully.");
+            }
+
+            // The existing toast function (for consistency with your app's style)
+            function showToast(message) {
+              let toastContainer = document.getElementById("toastContainer");
+              if (!toastContainer) {
+                toastContainer = document.createElement("div");
+                toastContainer.id = "toastContainer";
+                toastContainer.style.position = "fixed";
+                toastContainer.style.bottom = "20px";
+                toastContainer.style.right = "20px";
+                toastContainer.style.zIndex = "10000";
+                document.body.appendChild(toastContainer);
+              }
+
+              const toast = document.createElement("div");
+              toast.textContent = message;
+              toast.style.background = "#333";
+              toast.style.color = "#fff";
+              toast.style.padding = "10px";
+              toast.style.marginTop = "10px";
+              toast.style.borderRadius = "4px";
+              toast.style.opacity = "1";
+
+              toastContainer.appendChild(toast);
+              setTimeout(() => {
+                toast.style.transition = "opacity 1s";
+                toast.style.opacity = "0";
+                setTimeout(() => {
+                  toastContainer.removeChild(toast);
+                }, 1000);
+              }, 3000);
+            }
+
+            })();
+          </script>
+  </body>
+
+</html></body><html>

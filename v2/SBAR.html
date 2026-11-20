@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+	<title>Bell Schedule - Barcode Login</title>
+	<link rel="icon" type="image/png" href="/logo.png">
+	<style>
+		:root {
+			--primary: #1c4a72;
+			--bg: #f5f5f5;
+			--text: #333;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			font-family: sans-serif;
+			background: var(--bg);
+			color: var(--text);
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh;
+      overflow-x:hidden;
+		}
+
+		header {
+			background: var(--primary);
+			color: #fff;
+			padding: 1rem;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+		}
+
+		header h1 {
+			margin: 0;
+			font-size: 1.25rem;
+		}
+
+		header .left,
+		header .nav {
+			display: flex;
+			gap: .5rem;
+		}
+
+		header button {
+			background: #fff;
+			color: var(--primary);
+			border: none;
+			padding: .5rem 1rem;
+			border-radius: 4px;
+			cursor: pointer;
+			white-space: nowrap;
+		}
+
+		main {
+			flex: 1;
+			padding: 1rem;
+		}
+
+		.periods {
+			list-style: none;
+			padding: 0;
+			margin: 1rem 0;
+		}
+
+		.periods li {
+			padding: .75rem;
+			margin-bottom: .5rem;
+			background: #fff;
+			border-left: 4px solid var(--primary);
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.periods li.past {
+			opacity: .6;
+			text-decoration: line-through;
+		}
+
+		.periods li.current {
+			background: var(--primary);
+			color: #fff;
+			font-weight: bold;
+		}
+
+		.calendar {
+			display: none;
+			margin-top: 1rem;
+		}
+
+		.calendar table {
+			width: 100%;
+			border-collapse: collapse;
+			background: #fff;
+		}
+
+		.calendar th,
+		.calendar td {
+			border: 1px solid #ddd;
+			width: 14.28%;
+			padding: .5rem;
+			text-align: center;
+			vertical-align: top;
+			cursor: pointer;
+		}
+
+		.calendar td:hover {
+			background: #f0f0f0;
+		}
+
+		.calendar .today {
+			background: var(--primary);
+			color: #ad8672;
+		}
+
+		#scanner {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 110%;
+			background: rgba(0, 0, 0, 0.75);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			z-index: 1000;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		#scanner video {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			max-width: 90%;
+			max-height: 80%;
+		}
+
+		#scanner p {
+			color: #fff;
+			margin-top: .5rem;
+			text-align: center;
+		}
+    #menuButton {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+    }
+		#floatingMenu {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+		}
+	</style>
+</head>
+
+<body>
+	<!-- Scanner overlay -->
+	<div id="scanner">
+		<div>
+			<div id="interactive" class="viewport"></div>
+      <p style="margin-top:2.2rem;">Point your camera at your school ID Card</p>
+		</div>
+	</div>
+
+	<header style="display:none;">
+		<div class="left">
+			<button id="dailyViewBtn">Daily</button>
+			<button id="monthViewBtn">Monthly</button>
+			<button id="todayBtn" onclick="renderDailyToday()">Today</button>
+		</div>
+		<h1 id="viewTitle">Bell Schedule</h1>
+		<div class="nav">
+			<button id="prevDay">&larr; Prev</button>
+			<button id="nextDay">Next &rarr;</button>
+		</div>
+	</header>
+
+	<main style="display:none;">
+		<!-- Daily view -->
+		<div id="daily" style="display:none;">
+			<h2 id="dateHeader"></h2>
+			<ul id="periodList" class="periods"></ul>
+		</div>
+
+		<!-- Calendar view -->
+		<div id="calendar" class="calendar">
+			<h2 id="monthName"></h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Sun</th>
+						<th>Mon</th>
+						<th>Tue</th>
+						<th>Wed</th>
+						<th>Thu</th>
+						<th>Fri</th>
+						<th>Sat</th>
+					</tr>
+				</thead>
+				<tbody id="calBody"></tbody>
+			</table>
+		</div>
+    <div id="floatingMenu">
+      <button id="menuButton" onclick="window.location.reload();" >
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: flex; justify-content: center; margin-left:12px; align-items: center; background: transparent; border: none; padding: 0;"viewBox="0 0 512 512" width="24" height="24">
+          <path
+            d="M497 273L329 441c-15 15-41 4.5-41-17v-96H152c-13.3 0-24-10.7-24-24v-96c0-13.3 10.7-24 24-24h136V88c0-21.4 25.9-32 41-17l168 168c9.3 9.4 9.3 24.6 0 34zM192 436v-40c0-6.6-5.4-12-12-12H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h84c6.6 0 12-5.4 12-12V76c0-6.6-5.4-12-12-12H96c-53 0-96 43-96 96v192c0 53 43 96 96 96h84c6.6 0 12-5.4 12-12z"
+            fill="white" />
+        </svg>
+      </button>
+    </div>
+	</main>
+
+	<!-- Firebase & QuaggaJS -->
+	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+	<script src="https://unpkg.com/quagga/dist/quagga.min.js"></script>
+	<script>
+		// --- Firebase config ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyAFreRZQyNL1TgLRFqahV7frEOTbWwK2no",
+      authDomain: "yancal.firebaseapp.com",
+      projectId: "yancal",
+      storageBucket: "yancal.firebasestorage.app",
+      messagingSenderId: "43607057377",
+      appId: "1:43607057377:web:c213aebf1ab4d6d61928a0",
+      measurementId: "G-BDL86XTVJX"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // In-memory state
+    let scheduleData = {};
+    let classes      = {};
+    let currentDate  = new Date();
+    let calendarMonth= new Date();
+
+    // 1) Sign in → 2) start scanner
+    firebase.auth()
+      .signInWithEmailAndPassword('nrayan678@gmail.com','bluejay360')
+      .then(startScanner)
+      .catch(e=>alert('Auth failed: '+e.message));
+
+    // 2) QuaggaJS live scan
+    function startScanner(){
+      document.getElementById('scanner').style.display='flex';
+      Quagga.init({
+        inputStream:{
+          name:"Live",type:"LiveStream",
+          target:document.querySelector('#interactive'),
+          constraints:{facingMode:"environment"}
+        },
+        decoder:{readers:["code_39_reader"]}
+      },err=>{
+        if(err){alert('Quagga init error: '+err);return;}
+        Quagga.start();
+      });
+      Quagga.onDetected(onDetected);
+    }
+    function onDetected(result){
+      const code = result.codeResult.code;
+      Quagga.offDetected(onDetected);
+      Quagga.stop();
+      document.getElementById('scanner').style.display='none';
+      fetchUser(code);
+    }
+
+    // 3) Lookup user → load classes & scheduleData → show UI
+    async function fetchUser(userID){
+      try {
+        // find user
+        const uq = await db.collection('Users')
+                         .where('userID','==',userID)
+                         .limit(1).get();
+        if(uq.empty){
+          alert('No user for barcode: '+userID);
+          return startScanner();
+        }
+        const u = uq.docs[0].data();
+        classes = u.classes||{};
+
+        // fetch org doc
+        const orgDoc = await db.collection('org')
+                               .doc(u.orgName)
+                               .get();
+        if(!orgDoc.exists){
+          alert(`No schedule found for org "${u.orgName}"`);
+          return;
+        }
+
+        // use its fields directly as scheduleData
+        scheduleData = orgDoc.data();
+
+        // reveal UI
+        document.querySelector('header').style.display='flex';
+        document.querySelector('main').style.display='block';
+        initApp();
+
+      } catch(e){
+        alert('Fetch error: '+e.message);
+      }
+    }
+
+    // 4) Bell schedule UI
+    function initApp(){
+      document.getElementById('dailyViewBtn').onclick = showDaily;
+      document.getElementById('monthViewBtn').onclick = showCalendar;
+      document.getElementById('prevDay').onclick = ()=>{
+        if(document.getElementById('daily').style.display!=='none'){
+          currentDate=addDays(currentDate,-1); showDaily();
+          //document.getElementById('todayBtn').style.display="block"
+        } else {
+          calendarMonth.setMonth(calendarMonth.getMonth()-1);
+          renderCalendar();
+          //document.getElementById('todayBtn').style.display="block"
+        }
+      };
+      document.getElementById('nextDay').onclick = ()=>{
+        if(document.getElementById('daily').style.display!=='none'){
+          currentDate=addDays(currentDate,1); showDaily();
+          //document.getElementById('todayBtn').style.display="block"
+        } else {
+          calendarMonth.setMonth(calendarMonth.getMonth()+1);
+          renderCalendar();
+          //document.getElementById('todayBtn').style.display="block"
+        }
+      };
+      showDaily();
+    }
+
+    // helpers
+    function ymd(d){ return d.toISOString().slice(0,10); }
+    function addDays(d,n){ let x=new Date(d); x.setDate(x.getDate()+n); return x; }
+    function parseHM(s){
+      let [h,m]=s.split(':'); let d=new Date();
+      d.setHours(+h,+m,0,0); return d;
+    }
+
+    function showDaily(){
+      document.getElementById('daily').style.display='block';
+      document.getElementById('calendar').style.display='none';
+      document.getElementById('viewTitle').textContent='Daily View';
+      renderDaily();
+    }
+    function showCalendar(){
+      document.getElementById('daily').style.display='none';
+      document.getElementById('calendar').style.display='block';
+      document.getElementById('viewTitle').textContent='Monthly View';
+      renderCalendar();
+    }
+
+    function renderDaily(){
+      const hd=document.getElementById('dateHeader');
+      const ul=document.getElementById('periodList');
+      ul.innerHTML='';
+      const key=ymd(currentDate);
+      const info=scheduleData[key];
+      hd.textContent = currentDate.toDateString() + (info?` — ${info.type} Day`:' — No Schedule');
+      if(!info) return;
+
+      const arr=Object.entries(info.schedule)
+                      .sort((a,b)=>parseHM(a[1])-parseHM(b[1]));
+      let now=new Date(), idx=-1;
+      if(ymd(now)===key){
+        for(let i=0;i<arr.length;i++){
+          const start=parseHM(arr[i][1]);
+          const end=(i+1<arr.length)?parseHM(arr[i+1][1]):parseHM(info.end);
+          if(now>=start&&now<end){ idx=i; break; }
+        }
+      }
+
+      arr.forEach(([prd,t],i)=>{
+        const li=document.createElement('li');
+        // const name = prd==='L'?'Lunch':(classes['P'+prd]||'');
+        const name = prd === 'L' ? 'Lunch' : (classes[prd-1] || classes["P"+prd]) || '';
+        const [h,m]=t.split(':').map(Number);
+        const dh=(h%12)||12;
+        li.textContent=` ${prd}: ${dh}:${m.toString().padStart(2,'0')} — ${name}`;
+        if(i<idx) li.classList.add('past');
+        if(i===idx){
+          li.classList.add('current');
+          const span=document.createElement('span');
+          span.style.float='right';
+          span.style.fontWeight='bold';
+          span.style.marginLeft='10px';
+          li.appendChild(span);
+          const upd=()=>{
+            const now=new Date();
+            const end=(i+1<arr.length)?parseHM(arr[i+1][1]):parseHM(info.end);
+            const diff=Math.max(0,end-now);
+            const mins=Math.floor(diff/60000);
+            const secs=Math.floor((diff%60000)/1000);
+            span.textContent=`${mins}:${secs.toString().padStart(2,'0')} left`;
+          };
+          upd();
+          clearInterval(li._intv);
+          li._intv=setInterval(upd,1000);
+        }
+        ul.appendChild(li);
+      });
+    }
+
+    function renderCalendar(){
+      const tbody=document.getElementById('calBody');
+      tbody.innerHTML='';
+      const year=calendarMonth.getFullYear();
+      const month=calendarMonth.getMonth();
+      const monthNames=["January","February","March","April","May","June",
+                        "July","August","September","October","November","December"];
+      document.getElementById('monthName').textContent=`${monthNames[month]} ${year}`;
+
+      let first=new Date(year,month,1);
+      first.setDate(first.getDate()-first.getDay());
+
+      for(let w=0;w<6;w++){
+        const tr=document.createElement('tr');
+        for(let d=0;d<7;d++){
+          const dt=new Date(first);
+          dt.setDate(first.getDate()+w*7+d);
+          const key=ymd(dt);
+          const td=document.createElement('td');
+          td.textContent=dt.getDate();
+          td.style.cursor='pointer';
+          if(dt.getMonth()!==month) td.style.opacity='0.4';
+          if(scheduleData[key]){
+            const sp=document.createElement('div');
+            sp.textContent=scheduleData[key].type;
+            sp.style.marginTop='4px';
+            sp.style.fontSize='0.85em';
+            sp.style.fontWeight='bold';
+            sp.style.color='#ad8672';
+            td.appendChild(sp);
+          }
+          if(key===ymd(new Date())) td.classList.add('today');
+          td.onclick=()=>{ currentDate=dt; showDaily(); };
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+    (function() {
+      const inactivityLimit = 5 * 60 * 1000; // 5 minutes in milliseconds
+      let inactivityTimer;
+
+      function resetInactivityTimer() {
+          clearTimeout(inactivityTimer);
+          inactivityTimer = setTimeout(function() {
+              location.reload(); // Refresh the page
+          }, inactivityLimit);
+      }
+
+      // Set up event listeners for user activity
+      window.onload = resetInactivityTimer;
+      window.onmousemove = resetInactivityTimer;
+      window.onkeydown = resetInactivityTimer;
+      window.onclick = resetInactivityTimer;
+      window.onscroll = resetInactivityTimer;
+    })();
+
+    function renderDailyToday() {
+      currentDate = new Date();
+      showDaily();
+      //document.getElementById('todayBtn').style.display="none"
+    }
+
+	</script>
+</body>
+
+</html>

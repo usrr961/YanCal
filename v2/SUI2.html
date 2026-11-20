@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-EC5VQHZ1G2"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-EC5VQHZ1G2');
+	</script>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Bell Schedules</title>
+	<link rel="icon" type="image/png" href="/logo.png">
+	<style>
+		:root {
+			--primary: #1c4a72;
+			--bg: #f5f5f5;
+			--text: #333;
+			--modal-bg: #fff;
+			--overlay-bg: rgba(0, 0, 0, 0.5);
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			font-family: sans-serif;
+			background: var(--bg);
+			color: var(--text);
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh;
+		}
+
+		header {
+			background: var(--primary);
+			color: #fff;
+			padding: 1rem;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+		}
+
+		header h1 {
+			margin: 0;
+			font-size: 1.25rem;
+		}
+
+		header .nav {
+			display: flex;
+			gap: 0.5rem;
+		}
+
+		header button {
+			background: #fff;
+			color: var(--primary);
+			border: none;
+			padding: 0.5rem 1rem;
+			border-radius: 4px;
+			cursor: pointer;
+			white-space: nowrap;
+		}
+
+		/* New header account button */
+		#headerAccountBtn {
+			background: #fff;
+			color: var(--primary);
+			border: none;
+			padding: 0.5rem 1rem;
+			border-radius: 4px;
+			cursor: pointer;
+			margin-left: 10px;
+		}
+
+		main {
+			flex: 1;
+			padding: 1rem;
+		}
+
+		.periods {
+			list-style: none;
+			padding: 0;
+			margin: 1rem 0;
+		}
+
+		.periods li {
+			padding: 0.75rem;
+			margin-bottom: 0.5rem;
+			background: #fff;
+			border-left: 4px solid var(--primary);
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.periods li.past {
+			text-decoration: line-through;
+			opacity: 0.6;
+		}
+
+		.periods li.current {
+			background: var(--primary);
+			color: #fff;
+			font-weight: bold;
+		}
+
+		/* Calendar view */
+		.calendar {
+			display: none;
+			margin-top: 1rem;
+		}
+
+		.calendar table {
+			width: 100%;
+			border-collapse: collapse;
+			background: #fff;
+		}
+
+		.calendar th,
+		.calendar td {
+			border: 1px solid #ddd;
+			width: 14.28%;
+			padding: 0.5rem;
+			text-align: center;
+			vertical-align: top;
+			cursor: pointer;
+		}
+
+		.calendar td:hover {
+			background: #f0f0f0;
+		}
+
+		.calendar .today {
+			background: var(--primary);
+			color: #ad8672;
+		}
+
+		/* Setup & Onboarding UI */
+		.card {
+			background: #fff;
+			padding: 1rem;
+			border-radius: 4px;
+			max-width: 400px;
+			margin: 2rem auto;
+		}
+
+		.card h2 {
+			margin-top: 0;
+		}
+
+		.card label {
+			display: block;
+			margin-top: 0.5rem;
+		}
+
+		.card input {
+			width: 100%;
+			padding: 0.5rem;
+			margin-top: 0.25rem;
+		}
+
+		.card button {
+			margin-top: 1rem;
+			background: var(--primary);
+			color: #fff;
+			border: none;
+			padding: 0.5rem 1rem;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+
+		/* Floating Menu styles */
+		#floatingMenu {
+			position: fixed;
+			bottom: 20px;
+			right: 20px;
+			z-index: 100;
+		}
+
+		/* The menu button and container */
+		#menuButton {
+			background: var(--primary);
+			color: #fff;
+			border: none;
+			width: 60px;
+			height: 60px;
+			border-radius: 50%;
+			font-size: 24px;
+			cursor: pointer;
+		}
+
+		#menuContainer {
+			position: absolute;
+			bottom: 70px;
+			right: 0;
+			background: #fff;
+			border: 1px solid #ddd;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+			border-radius: 4px;
+			display: none;
+			flex-direction: column;
+			min-width: 180px;
+		}
+
+		#menuContainer .menu-option {
+			background: var(--primary);
+			color: #fff;
+			border: none;
+			border-radius: 4px;
+			padding: 10px 15px;
+			margin: 5px;
+			cursor: pointer;
+			text-align: left;
+		}
+
+		/* Modal overlay styles */
+		.modal-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: var(--overlay-bg);
+			display: none;
+			align-items: center;
+			justify-content: center;
+			z-index: 200;
+		}
+
+		.modal {
+			background: var(--modal-bg);
+			padding: 1rem;
+			border-radius: 4px;
+			max-width: 400px;
+			width: 90%;
+			position: relative;
+		}
+
+		.modal h2 {
+			margin-top: 0;
+		}
+
+		.modal .close {
+			position: absolute;
+			top: 5px;
+			right: 10px;
+			cursor: pointer;
+			font-size: 20px;
+			font-weight: bold;
+		}
+
+		.modal .auth-options button {
+			display: flex;
+			align-items: center;
+			background: #fff;
+			border: 1px solid #ddd;
+			padding: 10px;
+			margin: 5px 0;
+			cursor: pointer;
+			width: 100%;
+		}
+
+		.modal .auth-options button img {
+			width: 24px;
+			height: 24px;
+			margin-right: 10px;
+		}
+
+		.modal form {
+			margin-top: 10px;
+		}
+
+		.modal form input {
+			width: 100%;
+			padding: 0.5rem;
+			margin: 5px 0;
+		}
+
+		.modal form button {
+			background: var(--primary);
+			color: #fff;
+			border: none;
+			padding: 0.5rem 1rem;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+
+		.toast {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			background: #333;
+			color: #fff;
+			padding: 10px 20px;
+			border-radius: 4px;
+			display: none;
+			z-index: 300;
+		}
+
+		@media (min-width: 769px) {
+			.navParent {
+				display: inline;
+			}
+		}
+
+		.nav-container {
+			display: flex;
+			justify-content: flex-start;
+			/* Align buttons to the left */
+			align-items: center;
+			/* Center vertically */
+		}
+
+		@media (min-width: 769px) {
+			.nav {
+				display: inline;
+			}
+
+			#headerAccountBtn {
+				display: inline;
+				margin-left: 10px;
+			}
+		}
+
+		@media (max-width: 768px) {
+			.nav {
+				display: inline;
+				margin-top: 5px;
+			}
+
+			#headerAccountBtn {
+				display: inline-block;
+				margin-left: auto;
+			}
+
+
+			.nav-container {
+				display: flex;
+				width: 100%;
+				justify-content: flex-start;
+			}
+		}
+	</style>
+</head>
+
+
+
+<body>
+	<header>
+		<div class="left">
+			<button id="dailyViewBtn">Daily</button>
+			<button id="monthViewBtn">Monthly</button>
+			<button id="todayBtn" onclick="renderDailyToday()" style="background: none; border: none; cursor: pointer; transform: translateX(-10px) translateY(5px);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="24" height="24">
+          <path
+            d="M128 0c17.7 0 32 14.3 32 32l0 32 128 0 0-32c0-17.7 14.3-32 32-32s32 14.3 32 32l0 32 48 0c26.5 0 48 21.5 48 48l0 48L0 160l0-48C0 85.5 21.5 64 48 64l48 0 0-32c0-17.7 14.3-32 32-32zM0 192l448 0 0 272c0 26.5-21.5 48-48 48L48 512c-26.5 0-48-21.5-48-48L0 192zm80 64c-8.8 0-16 7.2-16 16l0 96c0 8.8 7.2 16 16 16l96 0c8.8 0 16-7.2 16-16l0-96c0-8.8-7.2-16-16-16l-96 0z"
+            fill="white" />
+        </svg>
+      </button>
+		</div>
+		<h1 id="viewTitle">Bell Schedule</h1>
+		<div class="nav-container">
+			<div class="nav">
+				<button id="prevDay">&larr;</button>
+				<button id="nextDay">&rarr;</button>
+			</div>
+
+			<button id="headerAccountBtn">Sign In</button>
+		</div>
+	</header>
+
+	<main>
+		<!-- Class setup view -->
+		<div id="setup" class="card" style="display:none">
+			<h2>Enter Your Class Names</h2>
+			<!-- A sign in button appears here if needed -->
+			<button id="setupSignInBtn" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">Sign In / Account</button>
+			<button id="btnUserModalOverlay" style="background: var(--primary); display:none; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">Set Up User</button>
+			<form id="setupForm">
+				<label>P1 <input name="P1" required /></label>
+				<label>P2 <input name="P2" required /></label>
+				<label>P3 <input name="P3" required /></label>
+				<label>P4 <input name="P4" required /></label>
+				<label>P5 (Lunch) <input name="P5" value="Lunch" required /></label>
+				<label>P6 <input name="P6" required /></label>
+				<label>P7 <input name="P7" required /></label>
+				<label>P8 <input name="P8" required /></label>
+				<label>P9 <input name="P9" required /></label>
+				<button type="submit">Save Classes</button>
+			</form>
+		</div>
+
+		<!-- Daily view -->
+		<div id="daily" style="display:none">
+			<h2 id="dateHeader"></h2>
+			<ul id="periodList" class="periods"></ul>
+		</div>
+
+		<!-- Calendar view -->
+		<div id="calendar" class="calendar">
+			<h2 id="monthName">xx</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Sun</th>
+						<th>Mon</th>
+						<th>Tue</th>
+						<th>Wed</th>
+						<th>Thu</th>
+						<th>Fri</th>
+						<th>Sat</th>
+					</tr>
+				</thead>
+				<tbody id="calBody"></tbody>
+			</table>
+		</div>
+	</main>
+
+	<!-- Floating Menu -->
+	<div style="display:none;width:100%;height:100%;background:rgba(0,0,0,0);position:absolute;" id="menuBtnOverlay"
+		onclick="document.getElementById('menuButton').click()">
+	</div>
+	<div id="floatingMenu" style="display:none;">
+		<button id="menuButton">☰</button>
+		<div id="menuContainer">
+			<button id="accountBtn" class="menu-option">Account</button>
+			<button id="changeOrg" class="menu-option">Change Organization</button>
+			<button id="syncSchedule" class="menu-option">Sync Schedule</button>
+			<button id="clearSchedule" class="menu-option">Clear Data</button>
+			<button id="exportIcsBtn"  class="menu-option">Export Schedule</button>
+		</div>
+	</div>
+
+	<!-- Account Management Modal -->
+	<div class="modal-overlay" id="accountModalOverlay">
+		<div class="modal">
+			<span class="close" id="closeAccountModal">&times;</span>
+			<div id="accountModalContent" onclick="event.stopPropagation();"></div>
+		</div>
+	</div>
+
+	<!-- Modal for Completing User Profile -->
+	<div class="modal-overlay" id="userModalOverlay">
+		<div class="modal">
+			<span class="close" id="closeUserModal">&times;</span>
+			<h2>Complete Your Profile</h2>
+			<p>Please provide your ID (numbers only) and your Organization Name:</p>
+			<form id="userProfileForm">
+				<label >ID: <p style="display:inline;" id="userIDText"></p><input type="text" id="userID" required /></label>
+				<br>
+				<label>Organization Name: <input type="text" id="orgName" required /></label>
+				<br>
+				<button type="submit">Save</button>
+			</form>
+		</div>
+	</div>
+
+	<!-- Modal for Changing Organization -->
+	<div class="modal-overlay" id="orgChangeModalOverlay"
+		onclick="document.getElementById('closeOrgChangeModal').click();">
+		<div class="modal" onclick="event.stopPropagation();">
+			<span class="close" id="closeOrgChangeModal">&times;</span>
+			<h2>Change Organization</h2>
+			<p>Current Organization: <span id="currentOrgDisplay"></span></p>
+			<p>Enter new Organization Name:</p>
+			<form id="orgChangeForm">
+				<input type="text" id="newOrgName" required />
+				<button type="submit">Change Org</button>
+			</form>
+		</div>
+	</div>
+
+	<!-- Toast Notification -->
+	<div class="toast" id="toast">Schedule updated!</div>
+
+	<!-- Firebase SDK -->
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-app.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-auth.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-firestore.js"></script>
+
+	<script>
+		const firebaseConfig = {
+			apiKey: "AIzaSyAFreRZQyNL1TgLRFqahV7frEOTbWwK2no",
+			authDomain: "yancal.firebaseapp.com",
+			projectId: "yancal",
+			storageBucket: "yancal.firebasestorage.app",
+			messagingSenderId: "43607057377",
+			appId: "1:43607057377:web:c213aebf1ab4d6d61928a0",
+			measurementId: "G-BDL86XTVJX"
+		};
+		firebase.initializeApp(firebaseConfig);
+		const auth = firebase.auth();
+		const db = firebase.firestore();
+
+		// APP STATE
+		let scheduleData = JSON.parse(localStorage.getItem('scheduleData') || 'null');
+		let classes = JSON.parse(localStorage.getItem('myClasses') || 'null');
+		let currentDate = new Date();
+		let calendarMonth = new Date();
+
+		// DOM references for schedule UI
+		const setupDiv = document.getElementById('setup');
+		const dailyDiv = document.getElementById('daily');
+		const calDiv = document.getElementById('calendar');
+		const navDiv = document.querySelector('.nav');
+		const viewTitle = document.getElementById('viewTitle');
+		const periodList = document.getElementById('periodList');
+		const dateHeader = document.getElementById('dateHeader');
+		document.addEventListener("DOMContentLoaded", (event) => {
+			console.log('s')
+		});
+
+		// Header Account Button
+		const headerAccountBtn = document.getElementById('headerAccountBtn');
+		// Also, on the setup page there is a setup sign in button.
+		const setupSignInBtn = document.getElementById('setupSignInBtn');
+
+		// Floating Menu references
+		const floatingMenu = document.getElementById('floatingMenu');
+		const menuButton = document.getElementById('menuButton');
+		const menuContainer = document.getElementById('menuContainer');
+		const accountBtn = document.getElementById('accountBtn');
+		const changeOrgBtn = document.getElementById('changeOrg');
+		const syncScheduleBtn = document.getElementById('syncSchedule');
+		const clearScheduleBtn = document.getElementById('clearSchedule');
+
+		// Modal references
+		const accountModalOverlay = document.getElementById('accountModalOverlay');
+		const accountModalContent = document.getElementById('accountModalContent');
+		const closeAccountModal = document.getElementById('closeAccountModal');
+
+		const userModalOverlay = document.getElementById('userModalOverlay');
+		const closeUserModal = document.getElementById('closeUserModal');
+		const userProfileForm = document.getElementById('userProfileForm');
+
+		const orgChangeModalOverlay = document.getElementById('orgChangeModalOverlay');
+		const closeOrgChangeModal = document.getElementById('closeOrgChangeModal');
+		const orgChangeForm = document.getElementById('orgChangeForm');
+		const currentOrgDisplay = document.getElementById('currentOrgDisplay');
+
+		// Toast reference
+		const toast = document.getElementById('toast');
+
+		setupSignInBtn.onclick = () => {
+			openAccountModal();
+		};
+		headerAccountBtn.onclick = () => {
+			openAccountModal();
+		};
+		// On initial load: if classes are not set locally, show the class setup page.
+		if (!classes) {
+			setupDiv.style.display = 'block';
+			viewTitle.textContent = 'Setup Classes';
+		} else {
+			initApp();
+		}
+
+		// Setup form for class names submission
+		document.getElementById('setupForm').onsubmit = e => {
+			e.preventDefault();
+			const fd = new FormData(e.target);
+			classes = {};
+			['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9'].forEach(p => {
+				classes[p] = fd.get(p);
+			});
+			localStorage.setItem('myClasses', JSON.stringify(classes));
+			// If user is signed in, update their Firestore document with classes.
+			if (auth.currentUser) {
+				db.collection("Users").where("email", "==", auth.currentUser.email).get()
+					.then(snapshot => {
+						if (!snapshot.empty) {
+							snapshot.docs[0].ref.update({
+									classes: classes
+								})
+								.then(() => showToast("Classes saved to account."))
+								.catch(err => showToast(err.message));
+						}
+					});
+			}
+			setupDiv.style.display = 'none';
+			initApp();
+		};
+
+		// Initialize main app UI and show floating menu.
+		function initApp() {
+			document.getElementById('dailyViewBtn').onclick = showDaily;
+			document.getElementById('monthViewBtn').onclick = showCalendar;
+			document.getElementById('prevDay').onclick = () => {
+				if (dailyDiv.style.display !== 'none') {
+					currentDate = addDays(currentDate, -1);
+					showDaily(); //document.getElementById('todayBtn').style.display="block"
+				} else {
+					calendarMonth.setMonth(calendarMonth.getMonth() - 1);
+					renderCalendar();
+					//document.getElementById('todayBtn').style.display="block"
+				}
+			};
+			document.getElementById('nextDay').onclick = () => {
+				if (dailyDiv.style.display !== 'none') {
+					currentDate = addDays(currentDate, 1);
+					showDaily();
+					//document.getElementById('todayBtn').style.display="block"
+				} else {
+					calendarMonth.setMonth(calendarMonth.getMonth() + 1);
+					renderCalendar();
+					//document.getElementById('todayBtn').style.display="block"
+				}
+			};
+			showDaily();
+			floatingMenu.style.display = 'block';
+			// Also, if on the setup page, show a sign in button.
+		}
+
+		// Utility helper functions
+		function ymd(d) {
+			return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+		}
+
+		function addDays(d, n) {
+			let x = new Date(d);
+			x.setDate(x.getDate() + n);
+			return x;
+		}
+
+		function parseHM(s) {
+			let [h, m] = s.split(':');
+			let d = new Date();
+			d.setHours(+h, +m, 0, 0);
+			return d;
+		}
+
+		// Render Daily View
+		function showDaily() {
+			calDiv.style.display = 'none';
+			dailyDiv.style.display = 'block';
+			navDiv.style.display = 'flex';
+			viewTitle.textContent = 'Daily';
+			renderDaily();
+		}
+
+		// Render Calendar View
+		function showCalendar() {
+			dailyDiv.style.display = 'none';
+			calDiv.style.display = 'block';
+			navDiv.style.display = 'flex';
+			viewTitle.textContent = 'Monthly';
+			renderCalendar();
+		}
+
+		function renderDaily() {
+			dateHeader.textContent = currentDate.toDateString();
+			periodList.innerHTML = '';
+			const key = ymd(currentDate);
+			console.log(currentDate)
+			const info = scheduleData ? scheduleData[key] : null;
+			// bail out if there's no info *or* no schedule object
+			if (!info || !info.schedule) {
+				periodList.innerHTML = '<li>No schedule for this day</li>';
+				return;
+			}
+			if (info.type) {
+				dateHeader.textContent += ` ${info.type}`
+			}
+			const arr = Object.entries(info.schedule)
+				.sort((a, b) => parseHM(a[1]) - parseHM(b[1]));
+			const now = new Date();
+			let currentIdx = -1;
+			if (ymd(now) === key) {
+				for (let i = 0; i < arr.length; i++) {
+					const start = parseHM(arr[i][1]);
+					const end = (i + 1 < arr.length) ? parseHM(arr[i + 1][1]) : parseHM(info.end);
+					if (now >= start && now < end) {
+						currentIdx = i;
+						break;
+					}
+				}
+			}
+			arr.forEach(([prd, t], i) => {
+				const li = document.createElement('li');
+				// const name = prd === 'L' ? 'Lunch' : classes['P' + prd] || '';
+				const name = prd === 'L' ? 'Lunch' : (classes[prd - 1] || classes["P" + prd]) || '';
+				const [h, m] = t.split(':').map(Number);
+				const displayH = (h % 12) || 12;
+				const displayTime = `${displayH}:${m.toString().padStart(2, '0')}`;
+				li.textContent = `${prd}: ${displayTime} — ${name}`;
+				if (i < currentIdx) li.classList.add('past');
+				if (i === currentIdx) {
+					li.classList.add('current');
+					const countdownSpan = document.createElement('span');
+					countdownSpan.style.float = 'right';
+					countdownSpan.style.fontWeight = 'bold';
+					countdownSpan.style.marginLeft = '10px';
+					li.appendChild(countdownSpan);
+					const updateCountdown = () => {
+						const now = new Date();
+						const end = (i + 1 < arr.length) ? parseHM(arr[i + 1][1]) : parseHM(info.end);
+						const diff = Math.max(0, end - now);
+						const mins = Math.floor(diff / 60000);
+						const secs = Math.floor((diff % 60000) / 1000);
+						countdownSpan.textContent = `${mins}:${secs.toString().padStart(2, '0')} left`;
+					};
+					updateCountdown();
+					clearInterval(li._interval);
+					li._interval = setInterval(updateCountdown, 1000);
+				}
+				periodList.appendChild(li);
+			});
+		}
+
+		function renderCalendar() {
+			const tbody = document.getElementById('calBody');
+			tbody.innerHTML = '';
+			const year = calendarMonth.getFullYear();
+			const month = calendarMonth.getMonth();
+			const monthNames = ["January", "February", "March", "April", "May", "June",
+				"July", "August", "September", "October", "November", "December"
+			];
+			document.getElementById('monthName').textContent = `${monthNames[month]} ${year}`;
+			let firstDay = new Date(year, month, 1);
+			firstDay.setDate(firstDay.getDate() - firstDay.getDay());
+			for (let w = 0; w < 6; w++) {
+				const tr = document.createElement('tr');
+				for (let d = 0; d < 7; d++) {
+					const dt = new Date(firstDay);
+					dt.setDate(firstDay.getDate() + w * 7 + d);
+					const key = ymd(dt);
+					const td = document.createElement('td');
+					td.textContent = dt.getDate();
+					if (dt.getMonth() !== month) td.style.opacity = '0.4';
+					if (scheduleData && scheduleData[key]) {
+						const sp = document.createElement('div');
+						sp.textContent = scheduleData[key].type;
+						sp.style.marginTop = '4px';
+						sp.style.fontSize = '0.85em';
+						sp.style.fontWeight = 'bold';
+						sp.style.color = '#ad8672';
+						td.appendChild(sp);
+					}
+					if (key === ymd(new Date())) td.classList.add('today');
+					td.onclick = () => {
+						currentDate = dt;
+						showDaily();
+						console.log(dt)
+					};
+					tr.appendChild(td);
+				}
+				tbody.appendChild(tr);
+			}
+		}
+
+		// -----------------------------
+		// Floating Menu & Options Logic
+		// -----------------------------
+		menuButton.onclick = () => {
+			menuBtnOverlay.style.display = (menuBtnOverlay.style.display === 'none' || menuBtnOverlay.style.display === '') ? 'flex' : 'none';
+			menuContainer.style.display = (menuContainer.style.display === 'none' || menuContainer.style.display === '') ? 'flex' : 'none';
+		};
+
+		accountBtn.onclick = () => {
+			openAccountModal();
+		};
+
+		changeOrgBtn.onclick = () => {
+			if (auth.currentUser) {
+				const userEmail = auth.currentUser.email;
+				db.collection("Users").where("email", "==", userEmail).get()
+					.then(snapshot => {
+						if (!snapshot.empty) {
+							const userData = snapshot.docs[0].data();
+							currentOrgDisplay.textContent = userData.orgName || "Not set";
+							orgChangeModalOverlay.style.display = 'flex';
+						}
+					});
+			}
+		};
+
+		syncScheduleBtn.onclick = () => {
+			if (auth.currentUser) {
+				const userEmail = auth.currentUser.email;
+				db.collection("Users").where("email", "==", userEmail).get()
+					.then(querySnapshot => {
+						if (querySnapshot.empty) {
+							showToast("User profile not found.");
+							return;
+						}
+						const userDoc = querySnapshot.docs[0].data();
+						db.collection("org").doc(userDoc.orgName).get()
+							.then(orgSnap => {
+								if (orgSnap.exists) {
+									const newSchedule = orgSnap.data();
+									const local = localStorage.getItem('scheduleData');
+									if (local !== JSON.stringify(newSchedule)) {
+										showToast("Schedule updated from cloud.");
+										window.location.reload()
+									}
+									localStorage.setItem('scheduleData', JSON.stringify(newSchedule));
+								} else {
+
+									showToast("No schedule found for your organization.");
+								}
+								console.log(orgSnap)
+							});
+					});
+			}
+		};
+
+		clearScheduleBtn.onclick = () => {
+			if (confirm("Are you sure you want to clear all schedule data?")) {
+				db.collection('Users').doc(localStorage.getItem('Person')).update({
+						classes: firebase.firestore.FieldValue.delete()
+					}).then(() => {
+						showToast("Schedule data cleared from cloud");
+					})
+					.catch((error) => {
+						console.error("Error deleting field: ", error);
+					});
+				localStorage.clear();
+				showToast("Schedule data cleared from device");
+			}
+		};
+
+		// -----------------------------
+		// Account Modal / Management Logic
+		// -----------------------------
+		function openAccountModal() {
+			showAccountDefault();
+			accountModalOverlay.style.display = 'flex';
+
+			closeAccountModal.onclick = () => {
+				accountModalOverlay.style.display = 'none';
+			};
+			accountModalOverlay.addEventListener('click', () => {
+				closeAccountModal.click()
+			})
+		}
+
+		closeAccountModal.onclick = () => {
+			accountModalOverlay.style.display = 'none';
+		};
+
+		function showAccountDefault() {
+			if (auth.currentUser) {
+				accountModalContent.innerHTML = `
+            <h2>Account</h2>
+            <p>Signed in as: ${auth.currentUser.displayName || auth.currentUser.email}</p>
+            <button id="modalSignOut" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Sign Out</button>
+            `;
+				document.getElementById('modalSignOut').onclick = () => {
+					auth.signOut().then(() => {
+						showToast("Signed out successfully.");
+						accountModalOverlay.style.display = 'none';
+						localStorage.clear();
+                        window.location.reload();
+					}).catch(err => showToast(err.message));
+				};
+			} else {
+				accountModalContent.innerHTML = `
+            <h2>Account</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="modalSignIn" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Sign In with Email</button>
+                <button id="modalGoogleSignIn" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Sign In with Google</button>
+                <button id="modalCreateAccount" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Create Account</button>
+                <button id="modalResetPassword" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Reset Password</button>
+            </div>
+            `;
+				document.getElementById('modalSignIn').onclick = showSignInForm;
+				document.getElementById('modalGoogleSignIn').onclick = showGoogleSignInForm;
+				document.getElementById('modalCreateAccount').onclick = showCreateAccountForm;
+				document.getElementById('modalResetPassword').onclick = showResetPasswordForm;
+			}
+		}
+
+		function showSignInForm() {
+			accountModalContent.innerHTML = `
+            <h2>Sign In</h2>
+            <form id="signInForm">
+            <input type="email" id="siEmail" placeholder="Email" required />
+            <input type="password" id="siPassword" placeholder="Password" required />
+            <button type="submit" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Sign In</button>
+            <button type="button" id="backToAccountOptions" style="margin-left: 10px;">Back</button>
+            </form>
+        `;
+			document.getElementById('signInForm').onsubmit = e => {
+				e.preventDefault();
+				const email = document.getElementById('siEmail').value;
+				const password = document.getElementById('siPassword').value;
+				auth.signInWithEmailAndPassword(email, password)
+					.then(() => {
+						showToast("Signed in successfully.");
+						accountModalOverlay.style.display = 'none';
+						// If classes not in local storage, try to load classes from Firestore.
+						db.collection("Users").where("email", "==", auth.currentUser.email).get()
+							.then(snapshot => {
+								if (!snapshot.empty && snapshot.docs[0].data().classes) {
+									classes = snapshot.docs[0].data().classes;
+									localStorage.setItem('myClasses', JSON.stringify(classes));
+                                    syncSchedule.click()
+								}
+							});
+					})
+					.catch(err => showToast(err.message));
+			};
+			document.getElementById('backToAccountOptions').onclick = showAccountDefault;
+		}
+
+		function showGoogleSignInForm() {
+			// Google Sign In using popup.
+			const provider = new firebase.auth.GoogleAuthProvider();
+			auth.signInWithPopup(provider)
+				.then(() => {
+					showToast("Signed in with Google successfully.");
+					document.getElementById('setup').style.display = "none"
+					syncScheduleBtn.click()
+					initApp()
+					accountModalOverlay.style.display = 'none';
+					// If classes not in local storage, try to load classes from Firestore.
+					db.collection("Users").where("email", "==", auth.currentUser.email).get()
+						.then(snapshot => {
+							if (!snapshot.empty && snapshot.docs[0].data().classes) {
+								classes = snapshot.docs[0].data().classes;
+								localStorage.setItem('myClasses', JSON.stringify(classes));
+							}
+						});
+				})
+				.catch(err => showToast(err.message));
+		}
+
+		function showCreateAccountForm() {
+			accountModalContent.innerHTML = `
+            <h2>Create Account</h2>
+            <form id="createAccountForm">
+            <input type="email" id="caEmail" placeholder="Email" required />
+            <input type="password" id="caPassword" placeholder="Password" required />
+            <button type="submit" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Create Account</button>
+            <button type="button" id="backToAccountOptions2" style="margin-left: 10px;">Back</button>
+            </form>
+        `;
+			document.getElementById('createAccountForm').onsubmit = e => {
+				e.preventDefault();
+				const email = document.getElementById('caEmail').value;
+				const password = document.getElementById('caPassword').value;
+				auth.createUserWithEmailAndPassword(email, password)
+					.then(() => {
+						showToast("Account created successfully.");
+						accountModalOverlay.style.display = 'none';
+					})
+					.catch(err => showToast(err.message));
+			};
+			document.getElementById('backToAccountOptions2').onclick = showAccountDefault;
+		}
+
+		function showResetPasswordForm() {
+			accountModalContent.innerHTML = `
+            <h2>Reset Password</h2>
+            <form id="resetPasswordForm">
+            <input type="email" id="rpEmail" placeholder="Email" required />
+            <button type="submit" style="background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Reset Password</button>
+            <button type="button" id="backToAccountOptions3" style="margin-left: 10px;">Back</button>
+            </form>
+        `;
+			document.getElementById('resetPasswordForm').onsubmit = e => {
+				e.preventDefault();
+				const email = document.getElementById('rpEmail').value;
+				auth.sendPasswordResetEmail(email)
+					.then(() => {
+						showToast("Password reset email sent.");
+						accountModalOverlay.style.display = 'none';
+					})
+					.catch(err => showToast(err.message));
+			};
+			document.getElementById('backToAccountOptions3').onclick = showAccountDefault;
+		}
+
+		// -----------------------------
+		// Organization Change Modal Logic
+		// -----------------------------
+		closeOrgChangeModal.onclick = () => {
+			orgChangeModalOverlay.style.display = 'none';
+		};
+
+		orgChangeForm.onsubmit = e => {
+			e.preventDefault();
+			const newOrg = document.getElementById('newOrgName').value;
+			if (auth.currentUser) {
+				const userEmail = auth.currentUser.email;
+				db.collection("Users").where("email", "==", userEmail).get()
+					.then(snapshot => {
+						if (!snapshot.empty) {
+							const docRef = snapshot.docs[0].ref;
+							docRef.update({
+									orgName: newOrg
+								})
+								.then(() => {
+									orgChangeModalOverlay.style.display = 'none';
+									showToast("Organization changed and syncing...");
+									db.collection("org").doc(newOrg).get()
+										.then(orgSnap => {
+											if (!orgSnap.empty) {
+												const cloudSchedule = orgSnap.docs[0].data().schedule;
+												localStorage.setItem('scheduleData', JSON.stringify(cloudSchedule));
+						            showToast("Success");
+											} else {
+												showToast("No schedule found for the new organization.");
+											}
+										});
+								});
+						}
+					});
+			}
+		};
+
+		// -----------------------------
+		// Toast Notification Function
+		// -----------------------------
+		function showToast(message) {
+			toast.textContent = message;
+			toast.style.display = 'block';
+			setTimeout(() => {
+				toast.style.display = 'none';
+			}, 3000);
+		}
+
+		// -----------------------------
+		// Firebase Auth State Listener
+		// -----------------------------
+		auth.onAuthStateChanged(user => {
+			if (user) {
+				headerAccountBtn.textContent = "Account";
+				accountBtn.textContent = (user.displayName || user.email) + " - Account";
+				// If user document exists and has classes, load them into localStorage.
+				db.collection("Users").where("email", "==", user.email).get()
+					.then(snapshot => {
+						if (!snapshot.empty && snapshot.docs[0].data().classes) {
+							classes = snapshot.docs[0].data().classes;
+							localStorage.setItem('myClasses', JSON.stringify(classes));
+							localStorage.setItem('Person', snapshot.docs[0].id)
+							document.getElementById('setup').style.display = "none"
+              document.getElementById('btnUserModalOverlay').style.display = 'flex';
+              document.getElementById('btnUserModalOverlay').addEventListener('click', () => {
+                userModalOverlay.style.display = 'flex';
+              })
+              document.getElementById('setupSignInBtn').style.display = 'none';
+							initApp()
+						}else {
+							userModalOverlay.style.display = 'flex';
+							if (snapshot.docs[0].data().userID) {
+                document.getElementById('userID').style.display = "none";
+                document.getElementById('userID').value = snapshot.docs[0].data().userID
+                document.getElementById('userIDText').innerHTML = snapshot.docs[0].data().userID
+							}
+						}
+					}).catch(err => {
+					  console.error('Firestore error:', err);showToast('Error')
+          });
+			} else {
+				headerAccountBtn.textContent = "Sign In";
+				accountBtn.textContent = "Account";
+			}
+		});
+
+		// -----------------------------
+		// Modal for Completing User Profile Logic
+		// -----------------------------
+		closeUserModal.onclick = () => {
+			userModalOverlay.style.display = 'none';
+		};
+
+		userProfileForm.onsubmit = e => {
+			e.preventDefault();
+			const id = document.getElementById('userID').value;
+			const orgName = document.getElementById('orgName').value;
+			if (auth.currentUser) {
+				const userEmail = auth.currentUser.email;
+				db.collection("Users").doc(userEmail + '_' + id).set({
+					email: userEmail,
+					userID: id,
+					orgName: orgName,
+					createdAt: new Date(),
+					classes: classes || null // Upload classes if available.
+				}).then(() => {
+					userModalOverlay.style.display = 'none';
+					db.collection("org").doc(orgName).get()
+						.then(orgSnap => {
+							if (orgSnap.exists) {
+								const newSchedule = orgSnap.data();
+								const local = localStorage.getItem('scheduleData');
+								if (local !== JSON.stringify(newSchedule)) {
+									showToast("Schedule updated from cloud.");
+								}
+								localStorage.setItem('scheduleData', JSON.stringify(newSchedule));
+							} else {
+								showToast("No schedule found for your organization.");
+							}
+						});
+				}).catch(err => showToast(err.message));
+			}
+		};
+
+		function generateICS() {
+			const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+			// Format a Date as YYYYMMDDTHHMMSS
+			function formatDate(dt) {
+				const Y = dt.getFullYear();
+				const M = String(dt.getMonth() + 1).padStart(2, '0');
+				const D = String(dt.getDate()).padStart(2, '0');
+				const h = String(dt.getHours()).padStart(2, '0');
+				const m = String(dt.getMinutes()).padStart(2, '0');
+				return `${Y}${M}${D}T${h}${m}00`;
+			}
+
+			// Grab your mapping of period IDs → names (either classes or periods)
+			const mapping = (typeof classes !== "undefined" ? classes :
+				typeof periods !== "undefined" ? periods :
+				{});
+
+			const scheduleData = JSON.parse(localStorage.getItem('scheduleData'));
+			if (!scheduleData) {
+				console.warn("No schedule data available. Exiting.");
+				return;
+			}
+
+			// VCALENDAR header
+			let ics = [
+				"BEGIN:VCALENDAR",
+				"VERSION:2.0",
+				"CALSCALE:GREGORIAN",
+				"METHOD:PUBLISH",
+				"PRODID:-//YourApp//BellSchedule//EN"
+			].join("\r\n") + "\r\n";
+
+			for (const key in scheduleData) {
+				const info = scheduleData[key];
+				if (!info || !info.schedule) continue;
+
+				// Parse YYYY-MM-DD as local date
+				const [Y, M, D] = key.split('-').map(Number);
+
+				// Sort events by their HH:MM
+				const events = Object.entries(info.schedule)
+					.sort((a, b) => {
+						const [ha, ma] = a[1].split(':').map(Number);
+						const [hb, mb] = b[1].split(':').map(Number);
+						return ha * 60 + ma - (hb * 60 + mb);
+					});
+
+				events.forEach(([prd, timeStr], idx) => {
+					const [h, m] = timeStr.split(':').map(Number);
+					const start = new Date(Y, M - 1, D, h, m);
+
+					// Determine end time
+					let [endH, endM] = idx + 1 < events.length ?
+						events[idx + 1][1].split(':').map(Number) :
+						info.end.split(':').map(Number);
+					const end = new Date(Y, M - 1, D, endH, endM);
+
+					// Build the personalized summary:
+					// - "Lunch" for L
+					// - mapping["P"+prd] if defined
+					// - fallback to "Period X"
+					let base;
+					if (prd === "L") {
+						base = "Lunch";
+					} else if (mapping["P" + prd]) {
+						base = mapping["P" + prd];
+					} else {
+						base = "Period " + prd;
+					}
+
+					// Prefix with order in the day
+					const summary = `${idx + 1} - ${base}`;
+
+					// Truly unique UID per event
+					const uid = (window.crypto && crypto.randomUUID) ?
+						crypto.randomUUID() :
+						`${Date.now()}-${idx}-${Math.floor(Math.random()*1e6)}@yancal`;
+
+					ics += [
+						"BEGIN:VEVENT",
+						`UID:${uid}`,
+						`DTSTAMP:${formatDate(new Date())}`,
+						`DTSTART:${formatDate(start)}`,
+						`DTEND:${formatDate(end)}`,
+						`SUMMARY:${summary}`,
+						`DESCRIPTION:${dayNames[start.getDay()]}`,
+						"END:VEVENT"
+					].join("\r\n") + "\r\n";
+				});
+			}
+
+			ics += "END:VCALENDAR\r\n";
+
+			// Trigger download
+			const blob = new Blob([ics], {
+				type: "text/calendar;charset=utf-8"
+			});
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = "weekly_schedule.ics";
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		}
+
+		// Wire up the button
+		document.getElementById("exportIcsBtn").onclick = generateICS;
+
+		function renderDailyToday() {
+			currentDate = new Date();
+			showDaily();
+			//document.getElementById('todayBtn').style.display="none"
+		}
+	</script>
+</body>
+
+</html>

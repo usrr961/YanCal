@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>Bell Schedules — Admin</title>
+
+	<link rel="manifest" href="manifest.json" />
+	<link rel="icon" type="image/x-icon" href="logo.png">
+	<link href='https://fonts.googleapis.com/css?family=Nunito:400,700' rel='stylesheet'>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+	<style>
+		:root {
+			--background-color: #121212;
+			--surface-color: #1e1e1e;
+			--primary-color: #3e6e9f;
+			--primary-hover-color: #5a8bc5;
+			--text-color: #e0e0e0;
+			--header-bg: rgba(20, 20, 20, 0.85);
+			--card-border-radius: 12px;
+			--button-border-radius: 8px;
+			--shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+		}
+
+		body {
+			background-color: var(--background-color);
+			color: var(--text-color);
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+			margin: 0;
+			padding: 90px 15px 30px;
+			-webkit-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+			overflow-x: hidden;
+		}
+
+		#floating-header {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			background-color: rgba(0, 0, 0, 0.8);
+			color: white;
+			padding-bottom: -6rem;
+			padding-top: 1rem;
+			text-align: center;
+			z-index: 998;
+			min-height: 2rem;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.seamless-iframe {
+			display: block;
+			width: 100%;
+			height: 112px;
+			border: none;
+			overflow: hidden;
+		}
+
+		#bte {
+			min-height: 3rem;
+			background-color: #1c4a72;
+			color: white;
+			border-radius: 10px;
+			font-size: 20px;
+			-webkit-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+			transition: transform .4s;
+			margin-bottom: 0px !important;
+			border: 0;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		#bte:hover {
+			filter: brightness(140%);
+			transform: scale(1.05);
+		}
+
+		/* --- Main Layout --- */
+		.card-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+			gap: 20px;
+			margin-top: 20px;
+			max-width: 1000px;
+			margin-left: auto;
+			margin-right: auto;
+		}
+
+		.card {
+			background-color: var(--surface-color);
+			border-radius: var(--card-border-radius);
+			padding: 20px;
+			box-shadow: var(--shadow);
+			transition: transform 0.3s ease, box-shadow 0.3s ease;
+		}
+
+		.card:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+		}
+
+		.card h3 {
+			margin-top: 0;
+			margin-bottom: 20px;
+			font-size: 1.25rem;
+			border-bottom: 1px solid var(--primary-color);
+			padding-bottom: 10px;
+		}
+
+		.card h3 .fa-solid {
+			margin-right: 8px;
+			color: var(--primary-hover-color);
+		}
+
+		.button-group {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 10px;
+		}
+
+		.card button {
+			width: 100%;
+			min-height: 3rem;
+			padding: 12px 15px;
+			font-size: 1rem;
+			background-color: var(--primary-color);
+			color: white;
+			border: none;
+			border-radius: var(--button-border-radius);
+			cursor: pointer;
+			text-align: left;
+			transition: background-color 0.3s, transform 0.2s;
+		}
+
+		.card button:hover {
+			background-color: var(--primary-hover-color);
+			transform: scale(1.03);
+		}
+
+		.card button .fa-solid {
+			margin-right: 10px;
+			width: 20px;
+			text-align: center;
+		}
+
+		/* --- Overlays and Toasts --- */
+		.overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.8);
+			color: white;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			flex-direction: column;
+			text-align: center;
+			z-index: 1000;
+			backdrop-filter: blur(5px);
+			opacity: 0;
+			visibility: hidden;
+			transition: opacity 0.3s, visibility 0.3s;
+		}
+
+		.overlay.visible {
+			opacity: 1;
+			visibility: visible;
+		}
+
+		.overlay-content {
+			background: var(--surface-color);
+			padding: 30px;
+			border-radius: var(--card-border-radius);
+			box-shadow: var(--shadow);
+			max-width: 90%;
+		}
+
+		.overlay-content p {
+			margin: 0 0 20px 0;
+		}
+
+		.overlay-content button {
+			padding: 10px 20px;
+			background-color: var(--primary-color);
+			color: white;
+			border: none;
+			border-radius: var(--button-border-radius);
+			cursor: pointer;
+			transition: background-color 0.3s;
+			font-size: 1rem;
+		}
+
+		.overlay-content button:hover {
+			background-color: var(--primary-hover-color);
+		}
+
+		#toast-container {
+			position: fixed;
+			bottom: 20px;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 1001;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 10px;
+			text-align: center;
+		}
+
+		.toast {
+			background-color: var(--surface-color);
+			color: var(--text-color);
+			padding: 12px 20px;
+			border-radius: var(--button-border-radius);
+			box-shadow: var(--shadow);
+			opacity: 0;
+			transform: translateY(20px);
+			transition: opacity 0.4s ease, transform 0.4s ease;
+			border-left: 4px solid var(--primary-color);
+		}
+
+		.toast.show {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		#build-label {
+			position: fixed;
+			bottom: 10px;
+			right: 10px;
+			color: rgba(255, 255, 255, 0.6);
+			font-size: 0.85rem;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+			z-index: 1002;
+			pointer-events: none;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div id="floating-header">
+		<img src="/AppImages/ios/144.png" alt="Logo" id="logo-button"
+			style="vertical-align: middle; width: 50px; height: 50px; cursor: pointer;" tabindex="0" role="button">
+		<h1 class="header" style="vertical-align: middle; display:inline; margin-left:1rem; font-size: 1.75rem;">Bell Schedules Admin</h1>
+		<button onclick="forceUpdate()" id="bte" title="Update Application"
+			style="vertical-align: middle; margin-left:1rem; padding: .4em;">
+			<iframe id="theBigIframe" class="seamless-iframe" src="/theBigDay.html" scrolling="no" seamless="seamless"
+				style="width:2rem; height:2rem; pointer-events: none;"></iframe>
+		</button>
+	</div>
+
+	<iframe class="seamless-iframe" src="countdown.html" scrolling="no" height="100" seamless="seamless"></iframe>
+
+	<main class="card-grid">
+		<section class="card">
+			<h3><i class="fa-solid fa-calendar-check"></i> Schedule &amp; User Admin</h3>
+			<div class="button-group">
+				<button data-url="Admin/SCHED_ADMIN2.html"><i class="fa-solid fa-building"></i> Set Bell Schedule for Organization</button>
+				<button data-url="Admin/Mass_Users.html"><i class="fa-solid fa-user-plus"></i> Mass Import Users</button>
+				<button data-url="Admin/SCHED_CSV.html"><i class="fa-solid fa-file-csv"></i> CSV Bell Schedule</button>
+			</div>
+		</section>
+
+		<section class="card">
+			<h3><i class="fa-solid fa-screwdriver-wrench"></i> Tools &amp; System</h3>
+			<div class="button-group">
+				<button data-url="index.html"><i class="fa-solid fa-house"></i> Back to Main</button>
+				<button data-url="https://docs.google.com/spreadsheets/d/1t_4CWEdHkr60RYsGdKItHneN6OBWIhfFUVc2qKnvTWY/edit?gid=138220488#gid=138220488"><i class="fa-solid fa-table-cells"></i> GSheet</button>
+				<button data-url="debugo.html"><i class="fa-solid fa-bug"></i> Debug</button>
+				<button id="force-update-card-btn"><i class="fa-solid fa-arrows-rotate"></i> Update Application</button>
+			</div>
+		</section>
+	</main>
+
+	<div id="ios-overlay" class="overlay">
+		<div class="overlay-content">
+			<p>To install this app on your iOS device, tap the share button and then "Add to Home Screen".</p>
+		</div>
+	</div>
+
+	<div id="custom-install" class="overlay">
+		<div class="overlay-content">
+			<p>Would you like to install this app on your device?</p>
+			<button id="install-btn">Install</button>
+		</div>
+	</div>
+
+	<div id="toast-container"></div>
+
+	<script>
+		const openURL = (url) => {
+			if (url) {
+				window.open(url, '_self').focus();
+			}
+		};
+
+		document.addEventListener('DOMContentLoaded', () => {
+			// --- Unobtrusive Event Listeners ---
+			document.querySelectorAll('button[data-url]').forEach(button => {
+				button.addEventListener('click', () => {
+					openURL(button.dataset.url);
+				});
+			});
+
+			document.getElementById('logo-button').addEventListener('click', () => {
+				let url = prompt('View');
+				if (url !== null && url.trim() !== '') {
+					if (!/\.html/gi.test(url)) {
+						url = url.replace(/\.ZZ/gi, '.html');
+					}
+					openURL(url);
+				}
+			});
+
+			document.getElementById('force-update-card-btn').addEventListener('click', forceUpdate);
+
+			// --- Service Worker and PWA Logic ---
+			if ('serviceWorker' in navigator) {
+				navigator.serviceWorker.register('sw.js').then(registration => {
+					registration.onupdatefound = () => {
+						const newWorker = registration.installing;
+						newWorker.onstatechange = () => {
+							if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+								document.dispatchEvent(new CustomEvent("swUpdated", { detail: registration }));
+							}
+						};
+					};
+				}).catch(err => console.error('Service Worker registration failed:', err));
+			}
+
+			if (!localStorage.getItem("hasVisited")) {
+				localStorage.setItem("hasVisited", "true");
+				setTimeout(requestNotificationPermission, 2000);
+			}
+
+			// --- PWA Installation Prompts ---
+			const iosOverlay = document.getElementById('ios-overlay');
+			const customInstall = document.getElementById('custom-install');
+			const installBtn = document.getElementById('install-btn');
+
+			const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+			const isPwaInstalled = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+			let deferredPrompt;
+			window.addEventListener('beforeinstallprompt', (e) => {
+				e.preventDefault();
+				deferredPrompt = e;
+				if (!isIos() && !isPwaInstalled()) {
+					customInstall.classList.add('visible');
+				}
+			});
+
+			if (isIos() && !isPwaInstalled()) {
+				iosOverlay.classList.add('visible');
+			}
+
+			installBtn.addEventListener('click', () => {
+				if (deferredPrompt) {
+					deferredPrompt.prompt();
+					deferredPrompt.userChoice.then(() => {
+						deferredPrompt = null;
+						customInstall.classList.remove('visible');
+					});
+				}
+			});
+
+			document.querySelectorAll('.overlay').forEach(overlay => {
+				overlay.addEventListener('click', (event) => {
+					if (event.target === overlay) {
+						overlay.classList.remove('visible');
+					}
+				});
+			});
+
+			// Prevent pinch-to-zoom
+			document.addEventListener('gesturestart', e => e.preventDefault());
+		});
+
+		// --- Core App Functions ---
+
+		function showToast(message, duration = 3000) {
+			const container = document.getElementById('toast-container');
+			const toast = document.createElement('div');
+			toast.innerHTML = message.replace(/\n/g, '<br>');
+			toast.className = 'toast';
+			container.appendChild(toast);
+
+			setTimeout(() => toast.classList.add('show'), 10);
+
+			setTimeout(() => {
+				toast.classList.remove('show');
+				toast.addEventListener('transitionend', () => toast.remove());
+			}, duration);
+		}
+
+		function requestNotificationPermission() {
+			if ("Notification" in window && Notification.permission === "default") {
+				Notification.requestPermission().then(permission => {
+					showToast(permission === "granted" ? "Notifications enabled." : "Notifications disabled.");
+				});
+			}
+		}
+
+		// --- Force Update Logic with Improved UX ---
+		async function forceUpdate() {
+			showToast("Checking network connection...");
+			try {
+				const ipResponse = await fetch("https://api64.ipify.org?format=json", { cache: "no-cache" });
+				if (!ipResponse.ok) throw new Error("Network error");
+				const ipData = await ipResponse.json();
+				console.log("Connected. IP:", ipData.ip);
+			} catch (error) {
+				showToast("No Wi-Fi connection available. Please connect to Wi-Fi to update the app.");
+				return;
+			}
+
+			showToast("Checking for updates...");
+
+			try {
+				// 1. Unregister all active service workers.
+				if ('serviceWorker' in navigator) {
+					const registrations = await navigator.serviceWorker.getRegistrations();
+					for (const registration of registrations) {
+						await registration.unregister();
+						console.log('Unregistered SW:', registration);
+					}
+				}
+
+				// 2. Clear all existing caches.
+				showToast("Clearing application cache...");
+				const cacheNames = await caches.keys();
+				for (const cacheName of cacheNames) {
+					await caches.delete(cacheName);
+					console.log('Deleted cache:', cacheName);
+				}
+
+				// 3. Load asset list from external JSON file.
+				showToast("Downloading new version...");
+				const assetsFileUrl = 'assetsToCache.json';
+				const assetsResponse = await fetch(assetsFileUrl, { cache: "reload" });
+				if (!assetsResponse.ok) {
+					throw new Error("Could not fetch assets file");
+				}
+				const assetsToCache = await assetsResponse.json();
+				console.log("Assets to cache loaded:", assetsToCache);
+
+				// 4. Re-download and re-cache assets.
+				const newCacheName = 'pwa-cache-' + Date.now();
+				const cache = await caches.open(newCacheName);
+
+				for (const url of assetsToCache) {
+					try {
+						const response = await fetch(url, { cache: "reload" });
+						if (response.ok) {
+							await cache.put(url, response.clone());
+							console.log('Re-cached:', url);
+						} else {
+							console.error(`Failed to fetch ${url}: ${response.statusText}`);
+						}
+					} catch (err) {
+						console.error(`Error fetching ${url}:`, err);
+					}
+				}
+
+				showToast("Update complete! Reloading...");
+				setTimeout(() => window.location.reload(), 1500);
+
+			} catch (err) {
+				console.error("Error during force update:", err);
+				showToast("Error loading assets file. Update aborted.");
+			}
+		}
+
+		document.addEventListener("swUpdated", (e) => {
+			const registration = e.detail;
+			const container = document.getElementById('toast-container');
+			const toast = document.createElement("div");
+			toast.textContent = "New version available! Tap to update.";
+			toast.className = "toast show";
+			toast.style.cursor = "pointer";
+			toast.onclick = () => {
+				if (registration.waiting) {
+					registration.waiting.postMessage({ type: "SKIP_WAITING" });
+				}
+				toast.remove();
+				window.location.reload();
+			};
+			container.appendChild(toast);
+		});
+	</script>
+
+	<div id="build-label">Bell Schedules Admin</div>
+</body>
+
+</html>

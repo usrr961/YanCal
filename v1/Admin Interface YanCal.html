@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Bell Schedule Generator</title>
+	<style>
+		:root {
+			--primary: #1c4a72;
+			--primary-light: #2a6f97;
+			--bg: #f0f4f8;
+			--text: #333;
+			--white: #fff;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: sans-serif;
+			background: var(--bg);
+			color: var(--text);
+			padding: 1rem;
+		}
+
+		h1 {
+			margin-bottom: 1rem;
+			color: var(--primary);
+		}
+
+		label {
+			display: block;
+			margin: .5rem 0 .2rem;
+		}
+
+		input,
+		select {
+			width: 100%;
+			padding: .5rem;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			margin-bottom: .5rem;
+		}
+
+		button {
+			background: var(--primary);
+			color: var(--white);
+			border: none;
+			padding: .6rem 1.2rem;
+			margin: .5rem .2rem 0;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+
+		button:hover {
+			background: var(--primary-light);
+		}
+
+		.flex {
+			display: flex;
+			gap: 1rem;
+			flex-wrap: wrap;
+		}
+
+		.flex>div {
+			flex: 1;
+			min-width: 200px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: .5rem;
+		}
+
+		th,
+		td {
+			border: 1px solid #ddd;
+			padding: .5rem;
+			text-align: left;
+		}
+
+		th {
+			background: var(--primary);
+			color: var(--white);
+		}
+
+		#fullScheduleTable {
+			max-height: 300px;
+			overflow-y: scroll;
+			display: block;
+		}
+
+		/* Modal */
+		.modal-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, .5);
+			display: none;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.modal {
+			background: var(--white);
+			padding: 1.5rem;
+			border-radius: 8px;
+			width: 100%;
+			max-width: 500px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+      max-height:400px;
+      overflow-y:scroll;
+		}
+
+		.modal header {
+			font-size: 1.25rem;
+			margin-bottom: .5rem;
+			color: var(--primary);
+		}
+
+		.modal .close {
+			float: right;
+			cursor: pointer;
+			font-size: 1.2rem;
+		}
+
+		.tabs {
+			display: flex;
+			margin-bottom: 1rem;
+		}
+
+		.tab {
+			flex: 1;
+			padding: .5rem;
+			text-align: center;
+			cursor: pointer;
+			background: #ddd;
+		}
+
+		.tab.active {
+			background: var(--primary);
+			color: var(--white);
+		}
+
+		.tab-content {
+			display: none;
+		}
+
+		.tab-content.active {
+			display: block;
+		}
+	</style>
+</head>
+
+<body>
+	<h1>Bell Schedule Generator</h1>
+	<div class="flex">
+		<div>
+			<label for="startDate">Start Date</label>
+			<input type="date" id="startDate"/>
+    </div>
+			<div>
+				<label for="endDate">End Date</label>
+				<input type="date" id="endDate"/>
+    </div>
+				<div>
+					<label for="sequence">Letter Sequence (comma‑sep)</label>
+					<input type="text" id="sequence" value="A,B,C,D"/>
+    </div>
+				</div>
+				<div class="flex">
+					<button id="addCustom">Add Custom Day</button>
+					<button id="settingsBtn">Settings</button>
+					<button id="generate">Generate Schedule</button>
+					<button id="export">Export JSON</button>
+				</div>
+				<table id="customTable">
+					<thead>
+						<tr>
+							<th>Date</th>
+							<th>Type</th>
+							<th>Length</th>
+							<th>Resume On</th>
+							<th>Schedule</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+				<div id="fullScheduleTable">
+					<table>
+						<thead>
+							<tr>
+								<th>Date</th>
+								<th>Day</th>
+								<th>Type</th>
+								<th>Length</th>
+								<th>Resume On</th>
+								<th>Schedule</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="scheduleBody"></tbody>
+					</table>
+				</div>
+
+				<!-- Modal Overlay -->
+				<div class="modal-overlay" id="modalOverlay">
+					<div class="modal">
+						<header>
+							<span id="modalTitle">Modal</span>
+							<span class="close" id="closeModal">&times;</span>
+						</header>
+						<!-- Tabs -->
+						<div class="tabs">
+							<div class="tab active" data-tab="custom">Custom Day</div>
+							<div class="tab" data-tab="settings">Settings</div>
+						</div>
+						<!-- Custom Day Tab -->
+						<div class="tab-content active" id="tab-custom">
+							<label for="customDate">Date</label>
+							<input type="date" id="customDate"/>
+							<label for="customType">Type Label</label>
+							<input type="text" id="customType" placeholder="e.g. A, B, C, D, E, NS"/>
+							<label for="customLength">Day Length</label>
+							<select id="customLength">
+          <option value="full">Full</option>
+          <option value="abbreviated">Abbreviated</option>
+          <option value="delayed">Delayed</option>
+          <option value="E">E Day</option>
+          <option value="NS">NS (No School)</option>
+        </select>
+							<label for="customResume">Resume On (Letter)</label>
+							<input type="text" id="customResume" placeholder="e.g. B"/>
+							<label for="customSchedule">Custom Schedule CSV</label>
+							<input type="text" id="customSchedule" placeholder="e.g. 1,2,3,L,6,7,8"/>
+							<button id="saveCustom">Save Custom</button>
+						</div>
+						<!-- Settings Tab -->
+						<div class="tab-content" id="tab-settings">
+							<h3>Period Durations (minutes)</h3>
+							<label>Normal:</label><input type="number" id="durNormal" value="57"/>
+							<label>Abbreviated/Delayed:</label><input type="number" id="durShort" value="40"/>
+							<label>E Day:</label><input type="number" id="durEDay" value="38"/>
+							<label>Lunch:</label><input type="number" id="durLunch" value="57"/>
+							<h3>Start/End Times</h3>
+							<label>Full Start:</label><input type="time" id="timeFullStart" value="08:00"/>
+							<label>Full End:</label><input type="time" id="timeFullEnd" value="14:33"/>
+							<label>Abbrev Start:</label><input type="time" id="timeAbbrevStart" value="08:00"/>
+							<label>Abbrev End:</label><input type="time" id="timeAbbrevEnd" value="13:10"/>
+							<label>Delayed Start:</label><input type="time" id="timeDelayedStart" value="10:00"/>
+							<label>Delayed End:</label><input type="time" id="timeDelayedEnd" value="14:33"/>
+							<h3>Default Sequences</h3>
+							<label>A Day:</label><input type="text" id="seqA" value="1,2,3,L,6,7,8"/>
+							<label>B Day:</label><input type="text" id="seqB" value="2,3,4,L,7,8,9"/>
+							<label>C Day:</label><input type="text" id="seqC" value="3,4,1,L,8,9,6"/>
+							<label>D Day:</label><input type="text" id="seqD" value="4,1,2,L,9,6,7"/>
+							<button id="saveSettings">Save Settings</button>
+						</div>
+					</div>
+				</div>
+
+				<script>
+					(function(){
+            const customDays = [];
+            let settings = {
+              durations: { normal:57, short:40, e:38, lunch:57 },
+              times: {
+                full:{start:'08:00', end:'14:33'},
+                abbreviated:{start:'08:00', end:'13:10'},
+                delayed:{start:'10:00', end:'14:33'}
+              },
+              sequences: {
+                A:['1','2','3','L','6','7','8'],
+                B:['2','3','4','L','7','8','9'],
+                C:['3','4','1','L','8','9','6'],
+                D:['4','1','2','L','9','6','7']
+              }
+            };
+            let finalSchedule = {};
+
+            const modalOverlay = document.getElementById('modalOverlay');
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            const settingsBtn = document.getElementById('settingsBtn');
+            const closeModalBtn = document.getElementById('closeModal');
+            const saveSettingsBtn = document.getElementById('saveSettings');
+            const addCustomBtn = document.getElementById('addCustom');
+            const saveCustomBtn = document.getElementById('saveCustom');
+            const customTableBody = document.querySelector('#customTable tbody');
+            const generateBtn = document.getElementById('generate');
+            const exportBtn = document.getElementById('export');
+            const scheduleBody = document.getElementById('scheduleBody');
+
+            tabs.forEach(tab=>{
+              tab.addEventListener('click', ()=>{
+                tabs.forEach(t=>t.classList.remove('active'));
+                contents.forEach(c=>c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+              });
+            });
+
+            settingsBtn.addEventListener('click', ()=> openModal('settings'));
+            addCustomBtn.addEventListener('click', ()=> openModal('custom'));
+            closeModalBtn.addEventListener('click', ()=> modalOverlay.style.display='none');
+
+            function openModal(tab){
+              document.getElementById('modalTitle').textContent = tab==='settings' ? 'Settings' : 'Custom Day';
+              tabs.forEach(t=> t.dataset.tab===tab ? t.classList.add('active') : t.classList.remove('active'));
+              contents.forEach(c=> c.id==='tab-'+tab ? c.classList.add('active') : c.classList.remove('active'));
+              if(tab==='settings'){
+                document.getElementById('durNormal').value = settings.durations.normal;
+                document.getElementById('durShort').value = settings.durations.short;
+                document.getElementById('durEDay').value = settings.durations.e;
+                document.getElementById('durLunch').value = settings.durations.lunch;
+                document.getElementById('timeFullStart').value = settings.times.full.start;
+                document.getElementById('timeFullEnd').value = settings.times.full.end;
+                document.getElementById('timeAbbrevStart').value = settings.times.abbreviated.start;
+                document.getElementById('timeAbbrevEnd').value = settings.times.abbreviated.end;
+                document.getElementById('timeDelayedStart').value = settings.times.delayed.start;
+                document.getElementById('timeDelayedEnd').value = settings.times.delayed.end;
+                document.getElementById('seqA').value = settings.sequences.A.join(',');
+                document.getElementById('seqB').value = settings.sequences.B.join(',');
+                document.getElementById('seqC').value = settings.sequences.C.join(',');
+                document.getElementById('seqD').value = settings.sequences.D.join(',');
+              } else {
+                ['customDate','customType','customLength','customResume','customSchedule'].forEach(id=> document.getElementById(id).value='');
+              }
+              modalOverlay.style.display='flex';
+            }
+
+            saveSettingsBtn.addEventListener('click', ()=>{
+              settings.durations.normal = parseInt(document.getElementById('durNormal').value);
+              settings.durations.short = parseInt(document.getElementById('durShort').value);
+              settings.durations.e = parseInt(document.getElementById('durEDay').value);
+              settings.durations.lunch = parseInt(document.getElementById('durLunch').value);
+              settings.times.full.start = document.getElementById('timeFullStart').value;
+              settings.times.full.end = document.getElementById('timeFullEnd').value;
+              settings.times.abbreviated.start = document.getElementById('timeAbbrevStart').value;
+              settings.times.abbreviated.end = document.getElementById('timeAbbrevEnd').value;
+              settings.times.delayed.start = document.getElementById('timeDelayedStart').value;
+              settings.times.delayed.end = document.getElementById('timeDelayedEnd').value;
+              settings.sequences.A = document.getElementById('seqA').value.split(',').map(s=>s.trim());
+              settings.sequences.B = document.getElementById('seqB').value.split(',').map(s=>s.trim());
+              settings.sequences.C = document.getElementById('seqC').value.split(',').map(s=>s.trim());
+              settings.sequences.D = document.getElementById('seqD').value.split(',').map(s=>s.trim());
+              modalOverlay.style.display='none';
+              renderCustomTable();
+            });
+
+            saveCustomBtn.addEventListener('click', ()=>{
+              const date = document.getElementById('customDate').value;
+              const type = document.getElementById('customType').value.trim();
+              const length = document.getElementById('customLength').value;
+              const resume = document.getElementById('customResume').value.trim();
+              const schedCsv = document.getElementById('customSchedule').value.trim();
+              if(!date||!type) return alert('Date and Type required');
+              const schedule = schedCsv ? schedCsv.split(',').map(s=>s.trim()) : [];
+              const entry = { date, type, length, resume, schedule };
+              const idx = customDays.findIndex(d=>d.date===date);
+              if(idx>=0) customDays[idx] = entry; else customDays.push(entry);
+              modalOverlay.style.display='none';
+              renderCustomTable();
+            });
+
+            function renderCustomTable(){
+              customTableBody.innerHTML='';
+              customDays.forEach((d,i)=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${d.date}</td><td>${d.type}</td><td>${d.length}</td><td>${d.resume}</td><td>${d.schedule.join(',')}</td><td><button data-i="${i}" class="editCustom">Edit</button><button data-i="${i}" class="delCustom">Delete</button></td>`;
+                customTableBody.appendChild(tr);
+              });
+              document.querySelectorAll('.editCustom').forEach(btn=> btn.addEventListener('click', e=>{
+                const i = +e.target.dataset.i;
+                const d = customDays[i];
+                openModal('custom');
+                setTimeout(()=>{
+                  document.getElementById('customDate').value = d.date;
+                  document.getElementById('customType').value = d.type;
+                  document.getElementById('customLength').value = d.length;
+                  document.getElementById('customResume').value = d.resume;
+                  document.getElementById('customSchedule').value = d.schedule.join(',');
+                }, 0);
+              }));
+              document.querySelectorAll('.delCustom').forEach(btn=> btn.addEventListener('click', e=>{
+                customDays.splice(+e.target.dataset.i, 1);
+                renderCustomTable();
+              }));
+            }
+
+            generateBtn.addEventListener('click', renderFullSchedule);
+            function renderFullSchedule(){
+              const start = document.getElementById('startDate').value;
+              const end = document.getElementById('endDate').value;
+              const seqOrder = document.getElementById('sequence').value.split(',').map(s=>s.trim());
+              if(!start||!end) return alert('Select dates');
+              finalSchedule = {};
+              scheduleBody.innerHTML = '';
+              let idx = 0;
+              const customMap = Object.fromEntries(customDays.map(d=>[d.date, d]));
+              const fmt = d=>d.toISOString().slice(0,10);
+              const wdName = d=>d.toLocaleDateString('en-US',{weekday:'long'});
+              let cur = parseLocalDate(start);
+              const endDate = parseLocalDate(end);
+              while(cur <= endDate){
+                const wd = cur.getDay();
+                console.log(wd)
+                const ds = fmt(cur);
+                if(wd!==0 && wd!==6){
+                  if(customMap[ds]){
+                    const cd = customMap[ds];
+                    console.log(cd)
+                    if(cd.length === 'NS'){
+                      finalSchedule[ds] = { type: cd.type, length: 'NS', resume: cd.resume };
+                      const tr = document.createElement('tr');
+                      tr.innerHTML = `<td>${ds}</td><td>${wdName(cur)}</td><td>${cd.type}</td><td>NS</td><td>${cd.resume||''}</td><td></td><td></td>`;
+                      scheduleBody.appendChild(tr);
+                    } else {
+                      const letter = cd.type;
+                      const lengthKey = cd.length;
+                      const resume = cd.resume;
+                      const daySeq = cd.schedule.length ? cd.schedule : (settings.sequences[letter]||[]);
+                      let timeType;
+                      if(lengthKey==='abbreviated') timeType='abbreviated';
+                      else if(lengthKey==='delayed') timeType='delayed';
+                      else timeType='full';
+                      const startTime = settings.times[timeType].start;
+                      const endTime = settings.times[timeType].end;
+                      let dur;
+                      if(lengthKey==='E') dur = settings.durations.e;
+                      else if(lengthKey==='full') dur = settings.durations.normal;
+                      else dur = settings.durations.short;
+                      const times = {};
+                      let [h,m] = startTime.split(':').map(Number);
+                      daySeq.forEach(p=>{
+                        const hh = String(h).padStart(2,'0');
+                        const mm = String(m).padStart(2,'0');
+                        times[p] = `${hh}:${mm}`;
+                        m += (p==='L' ? settings.durations.lunch : dur);
+                        h += Math.floor(m/60);
+                        m %= 60;
+                      });
+                      finalSchedule[ds] = { type: letter, length: lengthKey, resume: resume, start: startTime, end: endTime, schedule: times };
+                      const tr = document.createElement('tr');
+                      tr.innerHTML = `<td>${ds}</td><td>${wdName(cur)}</td><td>${letter}</td><td>${lengthKey}</td><td>${resume||''}</td><td>${JSON.stringify(times)}</td><td><button class="editSchedule" data-date="${ds}">Edit</button></td>`;
+                      scheduleBody.appendChild(tr);
+                    }
+                  } else {
+                    const letter = seqOrder[idx];
+                    idx = (idx + 1) % seqOrder.length;
+                    const daySeq = settings.sequences[letter]||[];
+                    const startTime = settings.times.full.start;
+                    const endTime = settings.times.full.end;
+                    const dur = settings.durations.normal;
+                    const times = {};
+                    let [h,m] = startTime.split(':').map(Number);
+                    daySeq.forEach(p=>{
+                      const hh = String(h).padStart(2,'0');
+                      const mm = String(m).padStart(2,'0');
+                      times[p] = `${hh}:${mm}`;
+                      m += (p==='L' ? settings.durations.lunch : dur);
+                      h += Math.floor(m/60);
+                      m %= 60;
+                    });
+                    finalSchedule[ds] = { type: letter, length: 'full', start: startTime, end: endTime, schedule: times };
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${ds}</td><td>${wdName(cur)}</td><td>${letter}</td><td>full</td><td></td><td>${JSON.stringify(times)}</td><td><button class="editSchedule" data-date="${ds}">Edit</button></td>`;
+                    scheduleBody.appendChild(tr);
+                  }
+                }
+                cur.setDate(cur.getDate()+1);
+              }
+              document.querySelectorAll('.editSchedule').forEach(btn=> btn.addEventListener('click', e=>{
+                const date = e.target.dataset.date;
+                const data = finalSchedule[date];
+                openModal('custom');
+                setTimeout(()=>{
+                  document.getElementById('customDate').value = date;
+                  document.getElementById('customType').value = data.type;
+                  document.getElementById('customLength').value = data.length;
+                  document.getElementById('customResume').value = data.resume || '';
+                  document.getElementById('customSchedule').value = data.schedule ? Object.keys(data.schedule).join(',') : '';
+                }, 0);
+              }));
+            }
+            function parseLocalDate(dateStr) {
+              const [year, month, day] = dateStr.split('-').map(Number);
+              return new Date(year, month - 1, day);
+            }
+
+            exportBtn.addEventListener('click', ()=>{
+              const blob = new Blob([JSON.stringify(finalSchedule,null,2)],{type:'application/json'});
+              const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='bell_schedule.json'; document.body.appendChild(a); a.click(); a.remove();
+            });
+
+          })();
+    </script>
+  </body>
+
+</html>

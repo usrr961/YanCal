@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>Bell Schedule Debug</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #0B0B06;
+			margin: 0;
+			padding: 20px;
+		}
+
+		h1, div, p {
+			color: #CCCCCC;
+		}
+
+		button {
+			padding: 10px 20px;
+			margin: 5px;
+			background-color: #1c4a72;
+			color: white;
+			border: none;
+			cursor: pointer;
+		}
+
+		button:hover {
+			background-color: #163a5a;
+		}
+
+		#app {
+			max-width: 600px;
+			margin: auto;
+			text-align: center;
+		}
+
+		#debug-info {
+			margin-top: 20px;
+			padding: 10px;
+			background-color: #1D1D1D;
+			border-radius: 5px;
+		}
+
+		.hidden {
+			display: none;
+		}
+
+		.info-container {
+			text-align: left;
+			background: black;
+			padding: 10px;
+			margin-top: 10px;
+			border-radius: 5px;
+			box-shadow: 0px 0px 5px #ccc;
+			/* Limit width and force wrapping */
+			max-width: 100%;
+			overflow-wrap: break-word;
+		}
+
+		.info-container ul {
+			list-style: none;
+			padding: 0;
+			margin: 0;
+		}
+
+		.info-container li {
+			padding: 15px;
+			margin: 5px 0;
+			background: #1D1D1D;
+			border-radius: 5px;
+			cursor: pointer;
+			overflow-wrap: break-word;
+		}
+
+		.info-container li:hover {
+			background: #2F2F2F;
+		}
+
+		.button-pair {
+			display: inline-block;
+			text-align: center;
+		}
+
+		.button-container {
+			margin-top: 10px;
+		}
+
+		/* Toast Notification */
+		#toast {
+			visibility: hidden;
+			min-width: 250px;
+			background-color: #1c4a72;
+			color: white;
+			text-align: center;
+			padding: 16px;
+			position: fixed;
+			left: 50%;
+			bottom: 30px;
+			transform: translateX(-50%);
+			border-radius: 5px;
+			z-index: 1000;
+			opacity: 0;
+			transition: opacity 0.5s, visibility 0.5s;
+		}
+
+		#toast.show {
+			visibility: visible;
+			opacity: 1;
+		}
+	</style>
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-app.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-auth.js"></script>
+</head>
+
+<body>
+	<div id="app">
+		<h1>Bell Schedule Debug</h1>
+		<div id="firebase-auth-status"></div>
+		<div id="internet-connection-status"></div>
+
+		<!-- Cache Section -->
+		<div class="button-container">
+			<div class="button-pair">
+				<button id="toggleCacheList">Show Cached Items</button>
+				<button id="clearCacheBtn">Clear Cache</button>
+			</div>
+		</div>
+		<div id="cacheList" class="info-container hidden"></div>
+
+		<!-- Local Storage Section -->
+		<div class="button-container">
+			<div class="button-pair">
+				<button id="toggleLocalStorageList">Show Local Storage</button>
+				<button id="clearLocalStorageBtn">Clear Local Storage</button>
+			</div>
+		</div>
+		<div id="localStorageList" class="info-container hidden"></div>
+
+		<!-- Cookies Section -->
+		<div class="button-container">
+			<div class="button-pair">
+				<button id="toggleCookiesList">Show Cookies</button>
+				<button id="clearCookiesBtn">Clear Cookies</button>
+			</div>
+		</div>
+		<div id="cookiesList" class="info-container hidden"></div>
+
+		<div id="user-details" style="display:none;">
+			<h3>User Details</h3>
+			<div id="user-name"></div>
+			<div id="user-email"></div>
+			<button id="signOutBtn">Sign Out</button>
+		</div>
+
+		<button id="installPwaBtn">Reinstall PWA</button>
+		<div id="debug-info"></div>
+	</div>
+
+	<!-- Toast Notification -->
+	<div id="toast"></div>
+
+	<script>
+		// Show a toast message for 5 seconds
+		function showToast(message) {
+			const toast = document.getElementById('toast');
+			toast.textContent = message;
+			toast.classList.add('show');
+			setTimeout(() => {
+				toast.classList.remove('show');
+			}, 5000);
+		}
+
+		// Internet Connectivity
+		const internetStatus = document.getElementById('internet-connection-status');
+		function checkInternetConnection() {
+			internetStatus.innerHTML = navigator.onLine ? 'Internet: Connected' : 'Internet: Disconnected';
+		}
+		window.addEventListener('online', checkInternetConnection);
+		window.addEventListener('offline', checkInternetConnection);
+		checkInternetConnection();
+
+		// Firebase Config
+		const firebaseConfig = {
+			apiKey: "AIzaSyDJCH6jMaW4YgafWvSq6-mzOJYD8tq-Pps",
+			authDomain: "frcscout2024web.firebaseapp.com",
+			projectId: "frcscout2024web",
+			storageBucket: "frcscout2024web.appspot.com",
+			messagingSenderId: "1097038329085",
+			appId: "1:1097038329085:web:3d5261b7496dfc7408ba94"
+		};
+
+		// Initialize Firebase
+		firebase.initializeApp(firebaseConfig);
+		const auth = firebase.auth();
+
+		// Firebase Authentication Status
+		const authStatusDiv = document.getElementById('firebase-auth-status');
+		auth.onAuthStateChanged(user => {
+			if (user) {
+				authStatusDiv.innerHTML = `Logged in as: ${user.displayName} (${user.email})`;
+				document.getElementById('user-details').style.display = 'block';
+				document.getElementById('user-name').innerText = `Name: ${user.displayName}`;
+				document.getElementById('user-email').innerText = `Email: ${user.email}`;
+			} else {
+				authStatusDiv.innerHTML = 'Not logged in';
+				document.getElementById('user-details').style.display = 'none';
+			}
+		});
+
+		document.getElementById('signOutBtn').addEventListener('click', () => {
+			auth.signOut().then(() => {
+				showToast('Signed out successfully.');
+			}).catch(error => {
+				showToast('Error signing out: ' + error.message);
+			});
+		});
+
+		// --- UPDATE FUNCTIONS FOR DRAWERS ---
+
+		function updateLocalStorageList() {
+			const localStorageListDiv = document.getElementById('localStorageList');
+			let html = '<strong>Local Storage:</strong><ul>';
+			for (let i = 0; i < localStorage.length; i++) {
+				let key = localStorage.key(i);
+				html += `<li onclick="removeLocalStorageItem('${key}')">${key}: ${localStorage.getItem(key)}</li>`;
+			}
+			html += '</ul>';
+			localStorageListDiv.innerHTML = localStorage.length > 0 ? html : 'No local storage data.';
+		}
+
+		function updateCookiesList() {
+			const cookiesListDiv = document.getElementById('cookiesList');
+			let cookies = document.cookie.split("; ").filter(cookie => cookie.trim() !== "");
+			let html = '<strong>Cookies:</strong><ul>';
+			cookies.forEach(cookie => {
+				let cookieName = cookie.split('=')[0];
+				html += `<li onclick="removeCookie('${cookieName}')">${cookie}</li>`;
+			});
+			html += '</ul>';
+			cookiesListDiv.innerHTML = cookies.length > 0 ? html : 'No cookies found.';
+		}
+
+		function updateCacheList() {
+			const cacheListDiv = document.getElementById('cacheList');
+			if ('caches' in window) {
+				caches.keys().then(cacheNames => {
+					if (cacheNames.length === 0) {
+						cacheListDiv.innerHTML = 'No cache found.';
+					} else {
+						let cacheDisplay = '<strong>Cached Items:</strong><br>';
+						let cachePromises = cacheNames.map(cacheName => {
+							return caches.open(cacheName).then(cache => {
+								return cache.keys().then(requests => {
+									let fileList = requests.map(request => {
+										// If the cached file is on the same domain as the current PWA, use a different shade.
+										let fileBackground = "";
+										try {
+											const requestHostname = new URL(request.url).hostname;
+											if (requestHostname === location.hostname) {
+												fileBackground = ' style="background:#3F3F3F;"';
+											}
+										} catch (e) { }
+										return `<li onclick='removeCacheFile("${cacheName}", ${JSON.stringify(request.url)})'${fileBackground}>${request.url}</li>`;
+									}).join('');
+									return `<div><strong>${cacheName}:</strong><ul>${fileList || '<li>No files</li>'}</ul></div>`;
+								});
+							});
+						});
+						Promise.all(cachePromises).then(results => {
+							cacheListDiv.innerHTML = cacheDisplay + results.join('');
+						});
+					}
+				});
+			}
+		}
+
+		// --- TOGGLE EVENT LISTENERS ---
+
+		// Cache Drawer
+		document.getElementById('toggleCacheList').addEventListener('click', function () {
+			const cacheListDiv = document.getElementById('cacheList');
+			if (cacheListDiv.classList.contains('hidden')) {
+				updateCacheList();
+				cacheListDiv.classList.remove('hidden');
+			} else {
+				cacheListDiv.classList.add('hidden');
+			}
+		});
+
+		// Local Storage Drawer
+		document.getElementById('toggleLocalStorageList').addEventListener('click', function () {
+			const localStorageListDiv = document.getElementById('localStorageList');
+			if (localStorageListDiv.classList.contains('hidden')) {
+				updateLocalStorageList();
+				localStorageListDiv.classList.remove('hidden');
+			} else {
+				localStorageListDiv.classList.add('hidden');
+			}
+		});
+
+		// Cookies Drawer
+		document.getElementById('toggleCookiesList').addEventListener('click', function () {
+			const cookiesListDiv = document.getElementById('cookiesList');
+			if (cookiesListDiv.classList.contains('hidden')) {
+				updateCookiesList();
+				cookiesListDiv.classList.remove('hidden');
+			} else {
+				cookiesListDiv.classList.add('hidden');
+			}
+		});
+
+		// --- CLEAR BUTTONS ---
+
+		document.getElementById('clearCacheBtn').addEventListener('click', () => {
+			if ('caches' in window) {
+				caches.keys().then(cacheNames => {
+					cacheNames.forEach(cacheName => caches.delete(cacheName));
+					showToast('Cache cleared.');
+				});
+			}
+		});
+
+		document.getElementById('clearLocalStorageBtn').addEventListener('click', () => {
+			localStorage.clear();
+			showToast('Local Storage cleared.');
+		});
+
+		document.getElementById('clearCookiesBtn').addEventListener('click', () => {
+			document.cookie.split(";").forEach(cookie => {
+				document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/");
+			});
+			showToast('Cookies cleared.');
+		});
+
+		// --- REMOVAL FUNCTIONS ---
+
+		function removeLocalStorageItem(key) {
+			localStorage.removeItem(key);
+			showToast(`Removed LocalStorage item: ${key}`);
+			// If the drawer is open, update its contents
+			const localStorageListDiv = document.getElementById('localStorageList');
+			if (!localStorageListDiv.classList.contains('hidden')) {
+				updateLocalStorageList();
+			}
+		}
+
+		function removeCookie(name) {
+			document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+			showToast(`Removed Cookie: ${name}`);
+			const cookiesListDiv = document.getElementById('cookiesList');
+			if (!cookiesListDiv.classList.contains('hidden')) {
+				updateCookiesList();
+			}
+		}
+
+		function removeCacheFile(cacheName, url) {
+			caches.open(cacheName).then(cache => {
+				cache.delete(url).then(success => {
+					if (success) {
+						showToast(`Removed Cache File: ${url}`);
+					} else {
+						showToast(`Failed to remove Cache File: ${url}`);
+					}
+					const cacheListDiv = document.getElementById('cacheList');
+					if (!cacheListDiv.classList.contains('hidden')) {
+						updateCacheList();
+					}
+				});
+			});
+		}
+
+		// --- REINSTALL PWA BUTTON FUNCTIONALITY ---
+		async function forceUpdate() {
+			// 1. Unregister all active service workers.
+			if ('serviceWorker' in navigator) {
+				const registrations = await navigator.serviceWorker.getRegistrations();
+				for (const registration of registrations) {
+				await registration.unregister();
+				console.log('Unregistered SW:', registration);
+				}
+			}
+
+			// 2. Clear all existing caches.
+			const cacheNames = await caches.keys();
+			for (const cacheName of cacheNames) {
+				await caches.delete(cacheName);
+				console.log('Deleted cache:', cacheName);
+			}
+
+			// 3. Re-download and re-cache assets.
+			const newCacheName = 'pwa-cache-' + Date.now();
+			const cache = await caches.open(newCacheName);
+
+			const assetsFileUrl = 'assetsToCache.json'; // Ensure this file exists and is in JSON array format.
+			let assetsToCache;
+			try {
+				const assetsResponse = await fetch(assetsFileUrl, { cache: "reload" });
+				if (!assetsResponse.ok) {
+				throw new Error("Could not fetch assets file");
+				}
+				assetsToCache = await assetsResponse.json();
+				console.log("Assets to cache loaded:", assetsToCache);
+			} catch (err) {
+				console.error("Error loading assets file:", err);
+				alert("Error loading assets file. Update aborted.");
+				return;
+			}
+
+			for (const url of assetsToCache) {
+				try {
+				const response = await fetch(url, { cache: "reload" });
+				if (response.ok) {
+					await cache.put(url, response.clone());
+					console.log('Re-cached:', url);
+				} else {
+					console.error(`Failed to fetch ${url}: ${response.statusText}`);
+				}
+				} catch (err) {
+				console.error(`Error fetching ${url}:`, err);
+				}
+			}
+
+			// 4. Reload the page to use the updated cache.
+			window.location.reload();
+		}
+		document.getElementById('installPwaBtn').addEventListener('click', () => {
+			// // Wipe all caches
+			// if ('caches' in window) {
+			// 	caches.keys().then(cacheNames => {
+			// 		cacheNames.forEach(cacheName => caches.delete(cacheName));
+			// 	});
+			// }
+			// // Update all service workers (reregister)
+			// if ('serviceWorker' in navigator) {
+			// 	navigator.serviceWorker.getRegistrations().then(registrations => {
+			// 		registrations.forEach(registration => {
+			// 			registration.update();
+			// 		});
+			// 	});
+			// }
+			// // Reload the page to fetch all assets from the web
+			// location.reload();
+			forceUpdate();
+		});
+
+	</script>
+	<button style="padding: 8.4px 12px;border-radius: 4px;cursor: pointer;min-width: 70px;min-height: 40px;margin-top: 0.6rem;margin-right: 0.3rem;position: fixed;left: 10px;bottom: 20px;" onclick=" window.history.back()">Back</button>
+
+</body>
+
+</html>
